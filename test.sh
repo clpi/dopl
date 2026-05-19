@@ -20,4 +20,5 @@ if [ $? -eq 0 ]; then
     fi
 else
     echo "Failed to compile C unit tests!"
+    exit 1
 fi
