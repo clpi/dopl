@@ -65,10 +65,8 @@ cd tree-sitter-do
 
 ## Project Structure
 
-(`repo-root/` is the repository folder name you cloned, e.g. `dopl/`.)
-
 ```
-repo-root/
+ado/
 ├── doc                    # Compiler executable
 ├── ado-edit               # Neovim launcher with full IDE support
 ├── build.sh              # Build compiler

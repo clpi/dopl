@@ -33,7 +33,7 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "ado",
   callback = function()
     vim.lsp.start({
-      name = "ado-lsp",
+      name = "do-lsp",
       cmd = {vim.fn.expand("~/.local/bin/do-lsp")},
       root_dir = vim.fs.dirname(vim.fs.find({"build.sh"}, { upward = true })[1]),
     })
@@ -56,8 +56,8 @@ chmod +x ~/.local/bin/do-lsp
 {
   "genericLSP.languageServers": {
     "ado": {
-      "command": "/path/to/dopl/lsp/do-lsp.py",
-      "fileExtensions": ["do"]
+      "command": "/path/to/pl/lsp/do-lsp.py",
+      "fileExtensions": ["ado"]
     }
   }
 }
