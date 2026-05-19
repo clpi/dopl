@@ -22,3 +22,19 @@ else
     echo "Failed to compile C unit tests!"
     exit 1
 fi
+
+echo ""
+echo "Checking compiler does not write ./out or ./out.c..."
+tmpdir=$(mktemp -d)
+cp ./doc "$tmpdir"/
+cp ./example.do "$tmpdir"/
+(
+    cd "$tmpdir" || exit 1
+    ./doc example.do >/dev/null
+)
+if [ -e "$tmpdir/out" ] || [ -e "$tmpdir/out.c" ]; then
+    echo "Found insecure output files in working directory!"
+    rm -rf "$tmpdir"
+    exit 1
+fi
+rm -rf "$tmpdir"
