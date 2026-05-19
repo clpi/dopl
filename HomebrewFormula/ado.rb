@@ -1,8 +1,8 @@
 class Ado < Formula
   desc "Ado - A Minimal Programming Language"
-  homepage "https://github.com/OWNER/REPO"
-  url "https://github.com/OWNER/REPO/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "REPLACE_WITH_SHA256"
+  homepage ""
+  url ""
+  sha256 ""
   license "MIT"
 
   def install
