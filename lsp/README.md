@@ -56,8 +56,8 @@ chmod +x ~/.local/bin/do-lsp
 {
   "genericLSP.languageServers": {
     "ado": {
-      "command": "/path/to/pl/lsp/do-lsp.py",
-      "fileExtensions": ["ado"]
+      "command": "/path/to/repo-root/lsp/do-lsp.py",
+      "fileExtensions": ["do"]
     }
   }
 }
