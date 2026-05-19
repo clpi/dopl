@@ -18,6 +18,45 @@ char *read_file(char *path) {
     return buf;
 }
 
+#include <unistd.h>
+
+int compile_and_run(AST *ast) {
+    char temp_dir[] = "/tmp/ado_XXXXXX";
+    if (mkdtemp(temp_dir) == NULL) {
+        perror("mkdtemp");
+        return -1;
+    }
+
+    char src_path[1024];
+    char bin_path[1024];
+    snprintf(src_path, sizeof(src_path), "%s/out.c", temp_dir);
+    snprintf(bin_path, sizeof(bin_path), "%s/out", temp_dir);
+
+    FILE *out = fopen(src_path, "w");
+    if (!out) {
+        perror("fopen");
+        rmdir(temp_dir);
+        return -1;
+    }
+    codegen(ast, out);
+    fclose(out);
+
+    char cmd[4096];
+    snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s 2>/dev/null", bin_path, src_path);
+    int ret = system(cmd);
+
+    if (ret == 0) {
+        snprintf(cmd, sizeof(cmd), "%s", bin_path);
+        ret = system(cmd);
+    }
+
+    remove(src_path);
+    remove(bin_path);
+    rmdir(temp_dir);
+
+    return ret;
+}
+
 void repl(void) {
     char line[4096];
     char buffer[65536];
@@ -85,11 +124,7 @@ void repl(void) {
             Parser *p = parser_new(lex);
             AST *ast = parse_program(p);
             
-            FILE *out = fopen("out.c", "w");
-            codegen(ast, out);
-            fclose(out);
-            
-            int ret = system("cc -O2 -o out out.c 2>/dev/null && ./out");
+            int ret = compile_and_run(ast);
             if (ret != 0) {
                 printf("Error compiling or running code\n");
             }
@@ -98,8 +133,6 @@ void repl(void) {
             free(p);
             lexer_free(lex);
             free(src);
-            
-            if (system("rm -f out out.c") != 0) { }
             buffer[0] = '\0';
             buffer_len = 0;
         }
@@ -124,11 +157,7 @@ int main(int argc, char **argv) {
         Parser *p = parser_new(lex);
         AST *ast = parse_program(p);
         
-        FILE *out = fopen("out.c", "w");
-        codegen(ast, out);
-        fclose(out);
-        
-        int ret = system("cc -O2 -o out out.c && ./out");
+        int ret = compile_and_run(ast);
         (void)ret;
         
         ast_free(ast);
@@ -150,15 +179,7 @@ int main(int argc, char **argv) {
     Parser *p = parser_new(lex);
     AST *ast = parse_program(p);
     
-    FILE *out = fopen("out.c", "w");
-    codegen(ast, out);
-    fclose(out);
-    
-    int ret = system("cc -O2 -o out out.c && ./out");
-    if (ret != 0) {
-        // Try with more verbose error output
-        ret = system("cc -O2 -o out out.c && ./out");
-    }
+    int ret = compile_and_run(ast);
     
     ast_free(ast);
     free(p);
