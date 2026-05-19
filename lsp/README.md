@@ -33,7 +33,7 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = "ado",
   callback = function()
     vim.lsp.start({
-      name = "do-lsp",
+      name = "ado-lsp",
       cmd = {vim.fn.expand("~/.local/bin/do-lsp")},
       root_dir = vim.fs.dirname(vim.fs.find({"build.sh"}, { upward = true })[1]),
     })
