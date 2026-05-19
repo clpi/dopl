@@ -115,7 +115,7 @@ void repl(void) {
             fclose(out);
             
             char cmd[1024];
-            snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s 2>/dev/null && %s", bin_path, src_path, bin_path);
+            snprintf(cmd, sizeof(cmd), "cc -O2 -o '%s' '%s' 2>/dev/null && '%s'", bin_path, src_path, bin_path);
             int ret = system(cmd);
             if (ret != 0) {
                 printf("Error compiling or running code\n");
@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
         fclose(out);
         
         char cmd[1024];
-        snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s && %s", bin_path, src_path, bin_path);
+        snprintf(cmd, sizeof(cmd), "cc -O2 -o '%s' '%s' && '%s'", bin_path, src_path, bin_path);
         int ret = system(cmd);
         (void)ret;
         
@@ -238,11 +238,11 @@ int main(int argc, char **argv) {
     fclose(out);
     
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s 2>/dev/null && %s", bin_path, src_path, bin_path);
+    snprintf(cmd, sizeof(cmd), "cc -O2 -o '%s' '%s' 2>/dev/null && '%s'", bin_path, src_path, bin_path);
     int ret = system(cmd);
     if (ret != 0) {
         // Try with more verbose error output
-        snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s && %s", bin_path, src_path, bin_path);
+        snprintf(cmd, sizeof(cmd), "cc -O2 -o '%s' '%s' && '%s'", bin_path, src_path, bin_path);
         ret = system(cmd);
     }
     
