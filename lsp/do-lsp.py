@@ -190,7 +190,7 @@ class AdoLSP:
                     items.append({'label': name, 'kind': 3,
                         'detail': f"fn {name}({', '.join(params)})",
                         'documentation': sym.docstring or f"Function at line {sym.line + 1}",
-                        'insertText': f"{name}({', '.join(f'${i+1}:{p}}' for i,p in enumerate(params))})" if params else f"{name}($1)",
+                        'insertText': f"{name}({', '.join(f'${{{i+1}:{p}}}' for i,p in enumerate(params))})" if params else f"{name}($1)",
                         'insertTextFormat': 2})
                     break
                 elif sym.kind == 'variable':
