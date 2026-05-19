@@ -67,7 +67,13 @@ def test_lsp():
         'rootUri': 'file:///test',
         'capabilities': {}
     })
-    response = read_response(proc)
+    def wait_for_response(req_id):
+        while True:
+            res = read_response(proc)
+            if res.get('id') == req_id:
+                return res
+
+    response = wait_for_response(1)
     assert 'result' in response
     assert 'capabilities' in response['result']
     print("   ✓ Initialize successful")
@@ -101,7 +107,14 @@ fn main() {
         'textDocument': {'uri': 'file:///test.do'},
         'position': {'line': 5, 'character': 10}
     }, req_id=2)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     assert 'result' in response
     assert 'items' in response['result']
     items = [item['label'] for item in response['result']['items']]
@@ -115,7 +128,14 @@ fn main() {
         'textDocument': {'uri': 'file:///test.do'},
         'position': {'line': 5, 'character': 17}  # 'add' in add(5, 10)
     }, req_id=3)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         print(f"   ✓ Definition found at line {response['result']['range']['start']['line']}")
     else:
@@ -128,7 +148,14 @@ fn main() {
         'position': {'line': 0, 'character': 3},  # 'add' function name
         'context': {'includeDeclaration': True}
     }, req_id=4)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         print(f"   ✓ Found {len(response['result'])} references")
     
@@ -138,7 +165,14 @@ fn main() {
         'textDocument': {'uri': 'file:///test.do'},
         'position': {'line': 0, 'character': 3}
     }, req_id=5)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         print("   ✓ Hover information available")
     
@@ -147,7 +181,14 @@ fn main() {
     send_request(proc, 'textDocument/diagnostic', {
         'textDocument': {'uri': 'file:///test.do'}
     }, req_id=6)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         diag_count = len(response['result']['items'][0]['diagnostics'])
         print(f"   ✓ Diagnostics: {diag_count} issues found")
@@ -158,14 +199,28 @@ fn main() {
         'textDocument': {'uri': 'file:///test.do'},
         'options': {'tabSize': 2, 'insertSpaces': True}
     }, req_id=7)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         print("   ✓ Formatting available")
     
     # Shutdown
     print("9. Testing shutdown...")
     send_request(proc, 'shutdown', {}, req_id=8)
-    response = read_response(proc)
+    timeout_counter = 0
+    while True:
+        response = read_response(proc)
+        if 'id' in response:
+            break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     send_notification(proc, 'exit', {})
     print("   ✓ Shutdown successful")
     
