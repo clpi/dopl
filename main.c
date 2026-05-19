@@ -227,6 +227,11 @@ int main(int argc, char **argv) {
     FILE *out = fopen(src_path, "w");
     if (!out) {
         perror("fopen");
+        rmdir(tmp_dir);
+        ast_free(ast);
+        free(p);
+        lexer_free(lex);
+        free(src);
         return 1;
     }
     codegen(ast, out);
