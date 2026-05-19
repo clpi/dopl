@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build
+      run: make
+
+    - name: Test
+      run: make test
+
+    - name: Check Nix flake
+      if: runner.os == 'Linux'
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Check Nix flake (run)
+      if: runner.os == 'Linux'
+      run: nix flake check

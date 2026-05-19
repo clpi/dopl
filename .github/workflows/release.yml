@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: Build Release Artifacts
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: ado-linux-amd64
+          - os: macos-14
+            artifact_name: ado-macos-arm64
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build
+      run: make
+
+    - name: Prepare Artifact
+      run: |
+        mkdir -p dist
+        cp doc dist/${{ matrix.artifact_name }}
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: dist/${{ matrix.artifact_name }}
+
+  create-release:
+    name: Create Release
+    needs: build-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/ado-linux-amd64/ado-linux-amd64
+          artifacts/ado-macos-arm64/ado-macos-arm64
+        generate_release_notes: true
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: main
+        fetch-depth: 0
+
+    - name: Update Formula
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG_NAME}.tar.gz"
+
+        # Download the source tarball to calculate sha256
+        curl -sL $URL -o source.tar.gz
+        SHA256=$(sha256sum source.tar.gz | awk '{ print $1 }')
+
+        # Update the formula
+        sed -i "s|url \".*\"|url \"$URL\"|" HomebrewFormula/ado.rb
+        sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" HomebrewFormula/ado.rb
+        sed -i "s|homepage \".*\"|homepage \"https://github.com/${{ github.repository }}\"|" HomebrewFormula/ado.rb
+
+        # Commit and push
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add HomebrewFormula/ado.rb
+        git commit -m "Update Homebrew formula for ${TAG_NAME}"
+        git push origin main
