@@ -321,9 +321,10 @@ class AdoLSP:
 
         word_counts = {}
         for doc_text in self.docs.values():
-            for match in re.finditer(r'\b(\w+)\b', doc_text):
-                word = match.group(1)
-                word_counts[word] = word_counts.get(word, 0) + 1
+            for i, doc_line in enumerate(doc_text.split('\n')):
+                for match in re.finditer(r'\b(\w+)\b', doc_line):
+                    word = match.group(1)
+                    word_counts[word] = word_counts.get(word, 0) + 1
 
         for name, syms in self.symbols.items():
             for sym in syms:
