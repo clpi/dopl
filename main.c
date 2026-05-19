@@ -148,6 +148,10 @@ int main(int argc, char **argv) {
         char *tmp_dir = mkdtemp(template);
         if (!tmp_dir) {
             perror("mkdtemp");
+            ast_free(ast);
+            free(p);
+            lexer_free(lex);
+            free(src);
             return 1;
         }
         char src_path[256];
