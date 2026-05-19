@@ -318,11 +318,17 @@ class AdoLSP:
     def handle_code_lens(self, msg):
         uri = msg['params']['textDocument']['uri']
         lenses = []
-        text = self.docs.get(uri, '')
+
+        word_counts = {}
+        for doc_text in self.docs.values():
+            for match in re.finditer(r'\b(\w+)\b', doc_text):
+                word = match.group(1)
+                word_counts[word] = word_counts.get(word, 0) + 1
+
         for name, syms in self.symbols.items():
             for sym in syms:
                 if sym.uri == uri and sym.kind == 'function':
-                    refs = len(self.find_references(uri, sym.line, sym.col))
+                    refs = word_counts.get(sym.name, 0)
                     lenses.append({'range': {'start': {'line': sym.line, 'character': sym.col},
                         'end': {'line': sym.line, 'character': sym.col + len(sym.name)}},
                         'command': {'title': f'{refs} references', 'command': 'ado.showReferences',
