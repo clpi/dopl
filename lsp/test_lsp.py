@@ -161,10 +161,14 @@ fn main() {
         'textDocument': {'uri': 'file:///test.do'},
         'position': {'line': 0, 'character': 3}
     }, req_id=5)
+    timeout_counter = 0
     while True:
         response = read_response(proc)
         if 'id' in response:
             break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         print("   ✓ Hover information available")
     
