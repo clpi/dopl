@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
@@ -12,10 +14,57 @@ char *read_file(char *path) {
     long len = ftell(f);
     fseek(f, 0, SEEK_SET);
     char *buf = malloc(len + 1);
-    fread(buf, 1, len, f);
+    if (fread(buf, 1, len, f) != (size_t)len) {
+        free(buf);
+        fclose(f);
+        return NULL;
+    }
     buf[len] = '\0';
     fclose(f);
     return buf;
+}
+
+
+int compile_and_run(const char *out_bin, const char *out_c, int silent) {
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        return -1;
+    } else if (pid == 0) {
+        if (silent) {
+            if (!freopen("/dev/null", "w", stderr)) {
+                /* Ignore failure */
+            }
+        }
+        execlp("cc", "cc", "-O2", "-o", out_bin, out_c, NULL);
+        perror("execlp cc");
+        exit(1);
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+            pid_t run_pid = fork();
+            if (run_pid == -1) {
+                perror("fork");
+                return -1;
+            } else if (run_pid == 0) {
+                char dot_slash_bin[256];
+                snprintf(dot_slash_bin, sizeof(dot_slash_bin), "./%s", out_bin);
+                execlp(dot_slash_bin, out_bin, NULL);
+                perror("execlp run");
+                exit(1);
+            } else {
+                waitpid(run_pid, &status, 0);
+                if (WIFEXITED(status)) {
+                    return WEXITSTATUS(status);
+                } else {
+                    return -1;
+                }
+            }
+        } else {
+            return WEXITSTATUS(status);
+        }
+    }
 }
 
 void repl(void) {
@@ -89,7 +138,7 @@ void repl(void) {
             codegen(ast, out);
             fclose(out);
             
-            int ret = system("cc -O2 -o out out.c 2>/dev/null && ./out");
+            int ret = compile_and_run("out", "out.c", 1);
             if (ret != 0) {
                 printf("Error compiling or running code\n");
             }
@@ -99,7 +148,8 @@ void repl(void) {
             lexer_free(lex);
             free(src);
             
-            if (system("rm -f out out.c") != 0) { }
+            unlink("out");
+            unlink("out.c");
             buffer[0] = '\0';
             buffer_len = 0;
         }
@@ -128,7 +178,7 @@ int main(int argc, char **argv) {
         codegen(ast, out);
         fclose(out);
         
-        int ret = system("cc -O2 -o out out.c && ./out");
+        int ret = compile_and_run("out", "out.c", 0);
         (void)ret;
         
         ast_free(ast);
@@ -154,10 +204,10 @@ int main(int argc, char **argv) {
     codegen(ast, out);
     fclose(out);
     
-    int ret = system("cc -O2 -o out out.c && ./out");
+    int ret = compile_and_run("out", "out.c", 0);
     if (ret != 0) {
         // Try with more verbose error output
-        ret = system("cc -O2 -o out out.c && ./out");
+        ret = compile_and_run("out", "out.c", 0);
     }
     
     ast_free(ast);
