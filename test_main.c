@@ -46,7 +46,7 @@ void test_compile_and_run_child_exit_code() {
 void test_compile_and_run_compile_failure() {
     FILE *f = fopen("test_bad_compile.c", "w");
     assert(f != NULL);
-    fputs("int main( { return 0; }\n", f);
+    fputs("int main(){ return missing_symbol; }\n", f);
     fclose(f);
 
     int rc = compile_and_run("test_bad_compile_bin", "test_bad_compile.c", 1);

@@ -90,6 +90,7 @@ int compile_and_run(const char *out_bin, const char *out_c, int silent) {
                 snprintf(dot_slash_bin, dot_slash_len, "./%s", out_bin);
                 execlp(dot_slash_bin, out_bin, NULL);
                 perror("execlp run");
+                free(dot_slash_bin);
                 _exit(1);
             } else {
                 if (wait_for_child(run_pid, &status) == -1) {
