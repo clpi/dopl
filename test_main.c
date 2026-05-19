@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 #include <unistd.h>
 
 #define main ado_main
@@ -39,8 +40,8 @@ void test_compile_and_run_child_exit_code() {
     int rc = compile_and_run("test_exit_code_bin", "test_exit_code.c", 1);
     assert(rc == 7);
 
-    unlink("test_exit_code.c");
-    unlink("test_exit_code_bin");
+    assert(unlink("test_exit_code.c") == 0);
+    assert(unlink("test_exit_code_bin") == 0);
 }
 
 void test_compile_and_run_compile_failure() {
@@ -52,8 +53,8 @@ void test_compile_and_run_compile_failure() {
     int rc = compile_and_run("test_bad_compile_bin", "test_bad_compile.c", 1);
     assert(rc != 0);
 
-    unlink("test_bad_compile.c");
-    unlink("test_bad_compile_bin");
+    assert(unlink("test_bad_compile.c") == 0);
+    assert(unlink("test_bad_compile_bin") == 0 || errno == ENOENT);
 }
 
 void test_compile_and_run_missing_compiler() {
@@ -76,8 +77,8 @@ void test_compile_and_run_missing_compiler() {
         unsetenv("PATH");
     }
 
-    unlink("test_missing_cc.c");
-    unlink("test_missing_cc_bin");
+    assert(unlink("test_missing_cc.c") == 0);
+    assert(unlink("test_missing_cc_bin") == 0 || errno == ENOENT);
 }
 
 int main() {

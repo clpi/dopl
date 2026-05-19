@@ -81,16 +81,10 @@ int compile_and_run(const char *out_bin, const char *out_c, int silent) {
                 return -1;
             } else if (run_pid == 0) {
                 size_t dot_slash_len = strlen(out_bin) + 3;
-                char *dot_slash_bin = malloc(dot_slash_len);
-                if (!dot_slash_bin) {
-                    perror("malloc");
-                    _exit(1);
-                }
-
+                char dot_slash_bin[dot_slash_len];
                 snprintf(dot_slash_bin, dot_slash_len, "./%s", out_bin);
                 execlp(dot_slash_bin, out_bin, NULL);
                 perror("execlp run");
-                free(dot_slash_bin);
                 _exit(1);
             } else {
                 if (wait_for_child(run_pid, &status) == -1) {
