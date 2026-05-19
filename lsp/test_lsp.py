@@ -32,17 +32,21 @@ def send_notification(proc, method, params):
 
 def read_response(proc):
     """Read LSP response"""
-    headers = {}
     while True:
-        line = proc.stdout.readline().decode().strip()
-        if not line:
-            break
-        k, v = line.split(': ', 1)
-        headers[k] = v
-    
-    length = int(headers['Content-Length'])
-    content = proc.stdout.read(length).decode()
-    return json.loads(content)
+        headers = {}
+        while True:
+            line = proc.stdout.readline().decode().strip()
+            if not line:
+                break
+            k, v = line.split(': ', 1)
+            headers[k] = v
+
+        length = int(headers['Content-Length'])
+        content = proc.stdout.read(length).decode()
+        resp = json.loads(content)
+        if 'method' in resp and resp['method'] == 'textDocument/publishDiagnostics':
+            continue
+        return resp
 
 def test_lsp():
     """Test LSP features"""

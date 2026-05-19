@@ -126,9 +126,10 @@ class AdoLSP:
         word, _, _ = self.find_word_at(uri, line, col)
         if not word: return []
         refs = []
+        pattern = re.compile(r'\b' + re.escape(word) + r'\b')
         for doc_uri, doc_text in self.docs.items():
             for i, doc_line in enumerate(doc_text.split('\n')):
-                for match in re.finditer(r'\b' + re.escape(word) + r'\b', doc_line):
+                for match in pattern.finditer(doc_line):
                     refs.append(Reference(uri=doc_uri, line=i, col=match.start(), end_col=match.end()))
         return refs
     
