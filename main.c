@@ -21,6 +21,7 @@ char *read_file(char *path) {
 void repl(void) {
     char line[4096];
     char buffer[65536];
+    size_t buffer_len = 0;
     buffer[0] = '\0';
     int paren_depth = 0;
     int brace_depth = 0;
@@ -50,19 +51,32 @@ void repl(void) {
         }
         if (strncmp(line, "clear", 5) == 0) {
             buffer[0] = '\0';
+            buffer_len = 0;
             paren_depth = 0;
             brace_depth = 0;
             continue;
         }
         
+        size_t line_len = 0;
         for (int i = 0; line[i]; i++) {
             if (line[i] == '(') paren_depth++;
             if (line[i] == ')') paren_depth--;
             if (line[i] == '{') brace_depth++;
             if (line[i] == '}') brace_depth--;
+            line_len++;
         }
         
-        strcat(buffer, line);
+        if (buffer_len + line_len < sizeof(buffer)) {
+            memcpy(buffer + buffer_len, line, line_len + 1);
+            buffer_len += line_len;
+        } else {
+            printf("Error: Input buffer overflow\n");
+            buffer[0] = '\0';
+            buffer_len = 0;
+            paren_depth = 0;
+            brace_depth = 0;
+            continue;
+        }
         
         if (paren_depth <= 0 && brace_depth <= 0) {
             char *src = strdup(buffer);
@@ -87,6 +101,7 @@ void repl(void) {
             
             if (system("rm -f out out.c") != 0) { }
             buffer[0] = '\0';
+            buffer_len = 0;
         }
     }
 }

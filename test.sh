@@ -5,7 +5,7 @@ echo ""
 
 for file in example.do examples/*.do; do
     echo "Running $file:"
-    ./plc "$file"
+    ./doc "$file"
     echo "Result: $?"
     echo ""
 done
