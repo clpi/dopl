@@ -9,6 +9,10 @@
 
 void test_read_file_success() {
     FILE *f = fopen("test_dummy.txt", "w");
+    if (!f) {
+        fprintf(stderr, "Failed to create test file\n");
+        assert(0);
+    }
     fputs("hello world\n", f);
     fclose(f);
 
