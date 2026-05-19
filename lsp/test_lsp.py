@@ -57,7 +57,7 @@ def test_lsp():
         stderr=subprocess.PIPE
     )
     
-    print("Testing PL Language Server...")
+    print("Testing Ado Language Server...")
     print()
     
     # Initialize

@@ -1,4 +1,4 @@
-# DO Language Quick Reference
+# Ado Language Quick Reference
 
 ## File Extension
 `.do`
@@ -50,17 +50,17 @@ Currently none - all functions are user-defined
 
 ### Compile and Run
 ```bash
-./plc file.do
+./doc file.do
 ```
 
 ### Edit with IDE Support
 ```bash
-./do-edit file.do
+./ado-edit file.do
 ```
 
 ### REPL
 ```bash
-./plc
+./doc
 ```
 
 ## LSP Keybindings (in Neovim)
@@ -130,7 +130,7 @@ fn power(base, exp) {
 
 ## Performance Tips
 
-- DO compiles to optimized C code
+- Ado compiles to optimized C code
 - Recursion is efficient (tail call optimization depends on C compiler)
 - Integer arithmetic is fast (native CPU operations)
 

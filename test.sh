@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Testing PL compiler with all examples..."
+echo "Testing Ado compiler with all examples..."
 echo ""
 
 for file in example.do examples/*.do; do

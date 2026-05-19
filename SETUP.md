@@ -1,12 +1,12 @@
-# DO Language - Complete Setup Guide
+# Ado Language - Complete Setup Guide
 
 ## Overview
 
-DO is a minimal, performant programming language that compiles to C. It features a complete development environment with IDE support.
+Ado is a minimal, performant programming language that compiles to C. It features a complete development environment with IDE support.
 
 ## File Extension
 
-All DO source files use the `.do` extension.
+All Ado source files use the `.do` extension.
 
 ## Quick Start
 
@@ -15,15 +15,15 @@ All DO source files use the `.do` extension.
 ./build.sh
 
 # 2. Edit with full IDE support
-./do-edit example.do
+./ado-edit example.do
 
 # 3. Or compile and run
-./plc example.do
+./doc example.do
 ```
 
 ## Development Environment
 
-### Integrated Editor (`./do-edit`)
+### Integrated Editor (`./ado-edit`)
 
 Launch Neovim with:
 - **LSP Server**: Autocomplete, diagnostics, go-to-definition, find references
@@ -38,7 +38,7 @@ Launch Neovim with:
 - `<leader>rn` - Rename symbol
 - `<leader>f` - Format document
 
-### LSP Server (`lsp/pl-lsp.py`)
+### LSP Server (`lsp/do-lsp.py`)
 
 Comprehensive Language Server Protocol implementation:
 - Code completion with snippets
@@ -66,9 +66,9 @@ cd tree-sitter-do
 ## Project Structure
 
 ```
-pl/
-├── plc                    # Compiler executable
-├── do-edit               # Neovim launcher with full IDE support
+ado/
+├── doc                    # Compiler executable
+├── ado-edit               # Neovim launcher with full IDE support
 ├── build.sh              # Build compiler
 ├── example.do            # Main example file
 ├── examples/             # Example programs
@@ -76,7 +76,7 @@ pl/
 │   ├── collatz.do
 │   └── conditionals.do
 ├── lsp/                  # Language Server
-│   ├── pl-lsp.py        # LSP implementation
+│   ├── do-lsp.py        # LSP implementation
 │   ├── test_lsp.py      # Test suite
 │   ├── README.md
 │   └── FEATURES.md
@@ -112,7 +112,7 @@ pl/
 ## Editor Support
 
 ### Neovim (Recommended)
-Use `./do-edit` for full integration
+Use `./ado-edit` for full integration
 
 ### Vim
 ```bash
@@ -129,7 +129,7 @@ au BufRead,BufNewFile *.do set filetype=do
 Configure LSP in `settings.json` (see `lsp/README.md`)
 
 ### Other Editors
-Any LSP-compatible editor can use the DO LSP server
+Any LSP-compatible editor can use the Ado LSP server
 
 ## Testing
 
@@ -160,7 +160,7 @@ cd tree-sitter-do && tree-sitter test
 - Standard C library
 
 ### Editor (Optional)
-- Neovim 0.8+ (for `./do-edit`)
+- Neovim 0.8+ (for `./ado-edit`)
 - Python 3 (for LSP)
 - nvim-treesitter plugin (for Tree-sitter)
 - tree-sitter CLI (for building grammar)
@@ -175,4 +175,4 @@ See `examples/` directory for:
 
 ## Performance
 
-DO compiles to optimized C code, providing near-native performance. The generated C code is clean and readable, making it easy to understand the compilation process.
+Ado compiles to optimized C code, providing near-native performance. The generated C code is clean and readable, making it easy to understand the compilation process.

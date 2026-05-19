@@ -1,11 +1,11 @@
-# DO Language Editor Setup
+# Ado Language Editor Setup
 
 ## Quick Start
 
-Launch Neovim with full DO language support:
+Launch Neovim with full Ado language support:
 
 ```bash
-./do-edit example.do
+./ado-edit example.do
 ```
 
 This automatically loads:
@@ -50,11 +50,11 @@ cd tree-sitter-do
 
 ## Manual Setup
 
-If you prefer to use your own Neovim config, source the DO config:
+If you prefer to use your own Neovim config, source the Ado config:
 
 ```lua
 -- In your init.lua
-vim.cmd('source ' .. vim.fn.expand('~/path/to/pl/nvim/init.lua'))
+vim.cmd('source ' .. vim.fn.expand('~/path/to/ado/nvim/init.lua'))
 ```
 
 Or use it as a reference to integrate into your existing setup.
