@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
@@ -85,11 +86,28 @@ void repl(void) {
             Parser *p = parser_new(lex);
             AST *ast = parse_program(p);
             
-            FILE *out = fopen("out.c", "w");
+            char template[] = "/tmp/ado_XXXXXX";
+            char *tmp_dir = mkdtemp(template);
+            if (!tmp_dir) {
+                perror("mkdtemp");
+                continue;
+            }
+            char src_path[256];
+            char bin_path[256];
+            snprintf(src_path, sizeof(src_path), "%s/out.c", tmp_dir);
+            snprintf(bin_path, sizeof(bin_path), "%s/out", tmp_dir);
+
+            FILE *out = fopen(src_path, "w");
+            if (!out) {
+                perror("fopen");
+                continue;
+            }
             codegen(ast, out);
             fclose(out);
             
-            int ret = system("cc -O2 -o out out.c 2>/dev/null && ./out");
+            char cmd[1024];
+            snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s 2>/dev/null && %s", bin_path, src_path, bin_path);
+            int ret = system(cmd);
             if (ret != 0) {
                 printf("Error compiling or running code\n");
             }
@@ -99,7 +117,9 @@ void repl(void) {
             lexer_free(lex);
             free(src);
             
-            if (system("rm -f out out.c") != 0) { }
+            remove(src_path);
+            remove(bin_path);
+            rmdir(tmp_dir);
             buffer[0] = '\0';
             buffer_len = 0;
         }
@@ -124,11 +144,28 @@ int main(int argc, char **argv) {
         Parser *p = parser_new(lex);
         AST *ast = parse_program(p);
         
-        FILE *out = fopen("out.c", "w");
+        char template[] = "/tmp/ado_XXXXXX";
+        char *tmp_dir = mkdtemp(template);
+        if (!tmp_dir) {
+            perror("mkdtemp");
+            return 1;
+        }
+        char src_path[256];
+        char bin_path[256];
+        snprintf(src_path, sizeof(src_path), "%s/out.c", tmp_dir);
+        snprintf(bin_path, sizeof(bin_path), "%s/out", tmp_dir);
+
+        FILE *out = fopen(src_path, "w");
+        if (!out) {
+            perror("fopen");
+            return 1;
+        }
         codegen(ast, out);
         fclose(out);
         
-        int ret = system("cc -O2 -o out out.c && ./out");
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s && %s", bin_path, src_path, bin_path);
+        int ret = system(cmd);
         (void)ret;
         
         ast_free(ast);
@@ -136,6 +173,10 @@ int main(int argc, char **argv) {
         lexer_free(lex);
         free(src);
         
+        remove(src_path);
+        remove(bin_path);
+        rmdir(tmp_dir);
+
         repl();
         return 0;
     }
@@ -150,14 +191,31 @@ int main(int argc, char **argv) {
     Parser *p = parser_new(lex);
     AST *ast = parse_program(p);
     
-    FILE *out = fopen("out.c", "w");
+    char template[] = "/tmp/ado_XXXXXX";
+    char *tmp_dir = mkdtemp(template);
+    if (!tmp_dir) {
+        perror("mkdtemp");
+        return 1;
+    }
+    char src_path[256];
+    char bin_path[256];
+    snprintf(src_path, sizeof(src_path), "%s/out.c", tmp_dir);
+    snprintf(bin_path, sizeof(bin_path), "%s/out", tmp_dir);
+
+    FILE *out = fopen(src_path, "w");
+    if (!out) {
+        perror("fopen");
+        return 1;
+    }
     codegen(ast, out);
     fclose(out);
     
-    int ret = system("cc -O2 -o out out.c && ./out");
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s && %s", bin_path, src_path, bin_path);
+    int ret = system(cmd);
     if (ret != 0) {
         // Try with more verbose error output
-        ret = system("cc -O2 -o out out.c && ./out");
+        ret = system(cmd);
     }
     
     ast_free(ast);
@@ -165,5 +223,9 @@ int main(int argc, char **argv) {
     lexer_free(lex);
     free(src);
     
+    remove(src_path);
+    remove(bin_path);
+    rmdir(tmp_dir);
+
     return ret;
 }
