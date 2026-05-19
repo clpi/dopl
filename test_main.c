@@ -35,7 +35,8 @@ void test_ast_free() {
     ast_free(NULL);
 
     // Test a basic leaf node
-    AST *int_ast = malloc(sizeof(AST));
+    AST *int_ast = calloc(1, sizeof(AST));
+    assert(int_ast != NULL);
     int_ast->type = AST_INT;
     int_ast->int_val = 42;
     ast_free(int_ast);
