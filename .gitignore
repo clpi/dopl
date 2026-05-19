@@ -1,6 +1,7 @@
+*.o
 doc
+plc
+test_main
 test_lexer
 out
 out.c
-*.dSYM/
-plc
