@@ -201,10 +201,14 @@ fn main() {
     # Shutdown
     print("9. Testing shutdown...")
     send_request(proc, 'shutdown', {}, req_id=8)
+    timeout_counter = 0
     while True:
         response = read_response(proc)
         if 'id' in response:
             break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     send_notification(proc, 'exit', {})
     print("   ✓ Shutdown successful")
     
