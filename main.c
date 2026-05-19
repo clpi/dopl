@@ -90,6 +90,10 @@ void repl(void) {
             char *tmp_dir = mkdtemp(template);
             if (!tmp_dir) {
                 perror("mkdtemp");
+                ast_free(ast);
+                free(p);
+                lexer_free(lex);
+                free(src);
                 continue;
             }
             char src_path[256];
@@ -100,6 +104,11 @@ void repl(void) {
             FILE *out = fopen(src_path, "w");
             if (!out) {
                 perror("fopen");
+                rmdir(tmp_dir);
+                ast_free(ast);
+                free(p);
+                lexer_free(lex);
+                free(src);
                 continue;
             }
             codegen(ast, out);
@@ -148,6 +157,10 @@ int main(int argc, char **argv) {
         char *tmp_dir = mkdtemp(template);
         if (!tmp_dir) {
             perror("mkdtemp");
+            ast_free(ast);
+            free(p);
+            lexer_free(lex);
+            free(src);
             return 1;
         }
         char src_path[256];
@@ -158,6 +171,11 @@ int main(int argc, char **argv) {
         FILE *out = fopen(src_path, "w");
         if (!out) {
             perror("fopen");
+            rmdir(tmp_dir);
+            ast_free(ast);
+            free(p);
+            lexer_free(lex);
+            free(src);
             return 1;
         }
         codegen(ast, out);
@@ -195,6 +213,10 @@ int main(int argc, char **argv) {
     char *tmp_dir = mkdtemp(template);
     if (!tmp_dir) {
         perror("mkdtemp");
+        ast_free(ast);
+        free(p);
+        lexer_free(lex);
+        free(src);
         return 1;
     }
     char src_path[256];
@@ -205,6 +227,11 @@ int main(int argc, char **argv) {
     FILE *out = fopen(src_path, "w");
     if (!out) {
         perror("fopen");
+        rmdir(tmp_dir);
+        ast_free(ast);
+        free(p);
+        lexer_free(lex);
+        free(src);
         return 1;
     }
     codegen(ast, out);
