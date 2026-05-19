@@ -1,0 +1,6 @@
+*.o
+doc
+plc
+test_main
+out
+out.c
