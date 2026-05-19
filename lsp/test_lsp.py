@@ -165,10 +165,14 @@ fn main() {
     send_request(proc, 'textDocument/diagnostic', {
         'textDocument': {'uri': 'file:///test.do'}
     }, req_id=6)
+    timeout_counter = 0
     while True:
         response = read_response(proc)
         if 'id' in response:
             break
+        timeout_counter += 1
+        if timeout_counter > 10:
+            raise TimeoutError("No response with 'id' received after 10 attempts")
     if response.get('result'):
         diag_count = len(response['result']['items'][0]['diagnostics'])
         print(f"   ✓ Diagnostics: {diag_count} issues found")
