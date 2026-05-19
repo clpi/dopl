@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include "lexer.h"
@@ -10,11 +11,30 @@
 char *read_file(char *path) {
     FILE *f = fopen(path, "r");
     if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
+
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+
     long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = malloc(len + 1);
-    if (fread(buf, 1, len, f) != (size_t)len) {
+    if (len < 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    char *buf = malloc((size_t)len + 1);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+
+    if (fread(buf, 1, (size_t)len, f) != (size_t)len) {
         free(buf);
         fclose(f);
         return NULL;
@@ -24,6 +44,14 @@ char *read_file(char *path) {
     return buf;
 }
 
+
+static int wait_for_child(pid_t pid, int *status) {
+    while (waitpid(pid, status, 0) == -1) {
+        if (errno == EINTR) continue;
+        return -1;
+    }
+    return 0;
+}
 
 int compile_and_run(const char *out_bin, const char *out_c, int silent) {
     pid_t pid = fork();
@@ -38,31 +66,45 @@ int compile_and_run(const char *out_bin, const char *out_c, int silent) {
         }
         execlp("cc", "cc", "-O2", "-o", out_bin, out_c, NULL);
         perror("execlp cc");
-        exit(1);
+        _exit(1);
     } else {
-        int status;
-        waitpid(pid, &status, 0);
+        int status = 0;
+        if (wait_for_child(pid, &status) == -1) {
+            perror("waitpid");
+            return -1;
+        }
+
         if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
             pid_t run_pid = fork();
             if (run_pid == -1) {
                 perror("fork");
                 return -1;
             } else if (run_pid == 0) {
-                char dot_slash_bin[256];
-                snprintf(dot_slash_bin, sizeof(dot_slash_bin), "./%s", out_bin);
+                size_t dot_slash_len = strlen(out_bin) + 3;
+                char *dot_slash_bin = malloc(dot_slash_len);
+                if (!dot_slash_bin) {
+                    perror("malloc");
+                    _exit(1);
+                }
+
+                snprintf(dot_slash_bin, dot_slash_len, "./%s", out_bin);
                 execlp(dot_slash_bin, out_bin, NULL);
                 perror("execlp run");
-                exit(1);
+                free(dot_slash_bin);
+                _exit(1);
             } else {
-                waitpid(run_pid, &status, 0);
-                if (WIFEXITED(status)) {
-                    return WEXITSTATUS(status);
-                } else {
+                if (wait_for_child(run_pid, &status) == -1) {
+                    perror("waitpid");
                     return -1;
                 }
+                if (WIFEXITED(status)) return WEXITSTATUS(status);
+                if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
+                return -1;
             }
         } else {
-            return WEXITSTATUS(status);
+            if (WIFEXITED(status)) return WEXITSTATUS(status);
+            if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
+            return -1;
         }
     }
 }
