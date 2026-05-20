@@ -13,26 +13,67 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            arch: amd64
             artifact_name: ado-linux-amd64
+          - os: ubuntu-latest
+            arch: arm64
+            artifact_name: ado-linux-arm64
           - os: macos-14
+            arch: arm64
             artifact_name: ado-macos-arm64
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build
+    - name: Setup cross-compiler
+      if: matrix.os == 'ubuntu-latest' && matrix.arch == 'arm64'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
+    - name: Setup Ruby
+      if: matrix.os == 'ubuntu-latest'
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+
+    - name: Setup fpm
+      if: matrix.os == 'ubuntu-latest'
+      run: gem install fpm
+
+    - name: Build (Linux AMD64 / macOS)
+      if: matrix.arch != 'arm64' || matrix.os != 'ubuntu-latest'
       run: make
+
+    - name: Build (Linux ARM64)
+      if: matrix.os == 'ubuntu-latest' && matrix.arch == 'arm64'
+      run: make CC=aarch64-linux-gnu-gcc
 
     - name: Prepare Artifact
       run: |
         mkdir -p dist
         cp doc dist/${{ matrix.artifact_name }}
+        tar -czf dist/${{ matrix.artifact_name }}.tar.gz -C dist ${{ matrix.artifact_name }}
+
+    - name: Package with FPM
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+        else
+          VERSION="0.0.0" # Fallback for local/branch builds
+        fi
+        fpm -s dir -t deb -n ado -v $VERSION -a ${{ matrix.arch }} --prefix /usr/local/bin doc=ado
+        fpm -s dir -t rpm -n ado -v $VERSION -a ${{ matrix.arch }} --prefix /usr/local/bin doc=ado
+        mv ado*.deb dist/ || true
+        mv ado*.rpm dist/ || true
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: dist/${{ matrix.artifact_name }}
+        path: dist/*
 
   create-release:
     name: Create Release
@@ -54,7 +95,15 @@ jobs:
       with:
         files: |
           artifacts/ado-linux-amd64/ado-linux-amd64
+          artifacts/ado-linux-amd64/ado-linux-amd64.tar.gz
+          artifacts/ado-linux-amd64/*.deb
+          artifacts/ado-linux-amd64/*.rpm
+          artifacts/ado-linux-arm64/ado-linux-arm64
+          artifacts/ado-linux-arm64/ado-linux-arm64.tar.gz
+          artifacts/ado-linux-arm64/*.deb
+          artifacts/ado-linux-arm64/*.rpm
           artifacts/ado-macos-arm64/ado-macos-arm64
+          artifacts/ado-macos-arm64/ado-macos-arm64.tar.gz
         generate_release_notes: true
 
   update-homebrew:
@@ -76,6 +125,7 @@ jobs:
         URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG_NAME}.tar.gz"
 
         # Download the source tarball to calculate sha256
+        URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG_NAME}.tar.gz"
         curl -sL $URL -o source.tar.gz
         SHA256=$(sha256sum source.tar.gz | awk '{ print $1 }')
 

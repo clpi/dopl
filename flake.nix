@@ -25,6 +25,13 @@
 
             doCheck = true;
             checkTarget = "test";
+
+            meta = with pkgs.lib; {
+              description = "Ado - A Minimal Programming Language";
+              homepage = "https://github.com/ado-lang/ado";
+              license = licenses.mit;
+              maintainers = [ ];
+            };
           };
         };
 
