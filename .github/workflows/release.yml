@@ -14,25 +14,69 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact_name: ado-linux-amd64
+            arch: amd64
+          - os: ubuntu-latest
+            artifact_name: ado-linux-arm64
+            arch: arm64
           - os: macos-14
             artifact_name: ado-macos-arm64
+            arch: arm64
 
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install cross-compiler
+      if: matrix.artifact_name == 'ado-linux-arm64'
+      run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
     - name: Build
-      run: make
+      run: |
+        if [ "${{ matrix.artifact_name }}" = "ado-linux-arm64" ]; then
+          make CC=aarch64-linux-gnu-gcc
+        else
+          make
+        fi
 
     - name: Prepare Artifact
       run: |
         mkdir -p dist
         cp doc dist/${{ matrix.artifact_name }}
 
+    - name: Install fpm
+      if: runner.os == 'Linux'
+      run: sudo gem install fpm
+
+    - name: Build Packages
+      if: runner.os == 'Linux'
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        if [ -z "$VERSION" ] || [[ "$VERSION" == refs/* ]]; then
+          VERSION="0.1.0" # fallback for testing
+        fi
+
+        # Package DEB
+        fpm -s dir -t deb -n ado -v $VERSION -a ${{ matrix.arch }} \
+          --description "Ado - A Minimal Programming Language" \
+          --url "https://github.com/${{ github.repository }}" \
+          --maintainer "Ado Contributors" \
+          --prefix /usr/local/bin \
+          doc=/usr/local/bin/ado
+
+        # Package RPM
+        fpm -s dir -t rpm -n ado -v $VERSION -a ${{ matrix.arch }} \
+          --description "Ado - A Minimal Programming Language" \
+          --url "https://github.com/${{ github.repository }}" \
+          --maintainer "Ado Contributors" \
+          --prefix /usr/local/bin \
+          doc=/usr/local/bin/ado
+
+        mv *.deb *.rpm dist/ 2>/dev/null || true
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: dist/${{ matrix.artifact_name }}
+        path: dist/
 
   create-release:
     name: Create Release
@@ -54,6 +98,11 @@ jobs:
       with:
         files: |
           artifacts/ado-linux-amd64/ado-linux-amd64
+          artifacts/ado-linux-amd64/*.deb
+          artifacts/ado-linux-amd64/*.rpm
+          artifacts/ado-linux-arm64/ado-linux-arm64
+          artifacts/ado-linux-arm64/*.deb
+          artifacts/ado-linux-arm64/*.rpm
           artifacts/ado-macos-arm64/ado-macos-arm64
         generate_release_notes: true
 
