@@ -11,21 +11,67 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+          - os: ubuntu-latest
+            target: aarch64-linux
+          - os: macos-13
+            target: x86_64-darwin
+          - os: macos-14
+            target: aarch64-darwin
 
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ruby ruby-dev rubygems gcc make rpm
+        sudo gem install fpm
+
+    - name: Install cross-compiler (Linux aarch64)
+      if: matrix.target == 'aarch64-linux'
+      run: |
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
     - name: Build
-      run: make
+      run: |
+        if [ "${{ matrix.target }}" = "aarch64-linux" ]; then
+          make CC=aarch64-linux-gnu-gcc
+        else
+          make
+        fi
 
     - name: Test
+      if: matrix.target != 'aarch64-linux'
       run: make test
 
-    - name: Check Nix flake
+    - name: Test package generation (Linux)
       if: runner.os == 'Linux'
+      run: |
+        mkdir -p tmp_install
+        if [ "${{ matrix.target }}" = "aarch64-linux" ]; then
+          make CC=aarch64-linux-gnu-gcc DESTDIR=./tmp_install PREFIX=/usr install
+        else
+          make DESTDIR=./tmp_install PREFIX=/usr install
+        fi
+        VERSION="1.0.0"
+        ARCH="amd64"
+        RPM_ARCH="x86_64"
+        if [ "${{ matrix.target }}" = "aarch64-linux" ]; then
+          ARCH="arm64"
+          RPM_ARCH="aarch64"
+        fi
+        fpm -s dir -t deb -n ado -v $VERSION -a $ARCH -C ./tmp_install .
+        fpm -s dir -t rpm -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
+        ls -la *.deb *.rpm
+
+    - name: Check Nix flake
+      if: matrix.target == 'x86_64-linux'
       uses: DeterminateSystems/nix-installer-action@main
 
     - name: Check Nix flake (run)
-      if: runner.os == 'Linux'
+      if: matrix.target == 'x86_64-linux'
       run: nix flake check
