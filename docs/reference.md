@@ -82,7 +82,15 @@ The `while` loop repeatedly executes a block as long as a condition evaluates to
 while condition {
   # loop body
 }
-```
+
+### For Loop
+The `for` loop iterates over a range of integers. Note that the upper bound is exclusive.
+
+```ado
+for i in 1..10 {
+  # iterates from 1 to 9
+  print(i)
+}
 
 ## Functions
 
