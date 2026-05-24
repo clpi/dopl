@@ -51,7 +51,8 @@ jobs:
     - name: Prepare Artifact
       run: |
         mkdir -p dist
-        cp doc dist/${{ matrix.artifact_name }}
+        cp doc ado
+        tar -czf dist/${{ matrix.artifact_name }}.tar.gz ado
 
     - name: Generate Packages (Linux)
       if: runner.os == 'Linux'
@@ -74,8 +75,8 @@ jobs:
         fi
         fpm -s dir -t deb -n ado -v $VERSION -a $ARCH -C ./tmp_install .
         fpm -s dir -t rpm -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
-        cp *.deb dist/
-        cp *.rpm dist/
+        mv *.deb dist/
+        mv *.rpm dist/
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -108,8 +109,8 @@ jobs:
           artifacts/ado-macos-arm64/*
         generate_release_notes: true
 
-  update-homebrew:
-    name: Update Homebrew Formula
+  update-manifests:
+    name: Update Package Manifests
     needs: create-release
     runs-on: ubuntu-latest
     permissions:
@@ -121,23 +122,29 @@ jobs:
         ref: main
         fetch-depth: 0
 
-    - name: Update Formula
+    - name: Update Manifests
       run: |
         TAG_NAME=${GITHUB_REF#refs/tags/}
         URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG_NAME}.tar.gz"
+        VERSION=${GITHUB_REF#refs/tags/v}
 
         # Download the source tarball to calculate sha256
         curl -sL $URL -o source.tar.gz
         SHA256=$(sha256sum source.tar.gz | awk '{ print $1 }')
 
-        # Update the formula
+        # Update the Homebrew formula
         sed -i "s|url \".*\"|url \"$URL\"|" HomebrewFormula/ado.rb
         sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" HomebrewFormula/ado.rb
         sed -i "s|homepage \".*\"|homepage \"https://github.com/${{ github.repository }}\"|" HomebrewFormula/ado.rb
 
+        # Update flake.nix version
+        if [ -n "$VERSION" ] && [ "$VERSION" != "${GITHUB_REF}" ]; then
+          sed -i "s|version = \".*\";|version = \"$VERSION\";|" flake.nix
+        fi
+
         # Commit and push
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add HomebrewFormula/ado.rb
-        git commit -m "Update Homebrew formula for ${TAG_NAME}" || echo "No changes to commit"
+        git add HomebrewFormula/ado.rb flake.nix
+        git commit -m "Update manifests for ${TAG_NAME}" || echo "No changes to commit"
         git push origin main
