@@ -37,7 +37,7 @@ Hello, World from Ado!
 
 ## Variables and Types
 
-Currently, Ado primarily supports integer types. Variables are declared using the `let` keyword.
+Currently, Ado supports integers, arrays, and booleans. Variables are declared using the `let` keyword.
 
 ```ado
 fn main() {
@@ -45,6 +45,12 @@ fn main() {
   let b = 20
   let sum = a + b
   print("The sum of a and b is:", sum)
+
+  # Array support
+  let arr = [1, 2, 3]
+  push(arr, 4)
+  print("Array length is:", len(arr))
+
   return 0
 }
 ```
