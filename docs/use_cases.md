@@ -17,6 +17,7 @@ Because Ado leverages `-O2` C compiler optimizations under the hood, mathematica
 - **Sequence Generation:** Collatz sequences, Fibonacci numbers, or prime sieves.
 - **Mathematical Modeling:** Simulating simple physical systems via recurrence relations.
 - **Data Number Crunching:** Rapid processing of large integers using recursive and iterative structures.
+- **Array Processing:** Iterating over large integer arrays using `for` or `while` loops for rapid calculations.
 
 ## 3. Embedded Scripting and Microservices
 

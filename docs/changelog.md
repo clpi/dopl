@@ -5,6 +5,9 @@ All notable changes to the Ado language will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Arrays**: Integer arrays support (`[]`), with indexing, `push()`, and `len()` functions.
+- **Booleans**: Support for `true` and `false` literals in expressions.
+- **Strings**: Partial support for string literals inside the `print` function.
 - Comprehensive markdown documentation inside the `docs/` folder, including `tutorial.md`, `examples.md`, `reference.md`, `use_cases.md`, and `roadmap.md`.
 
 ## [0.1.0] - Initial Release

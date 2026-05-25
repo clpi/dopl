@@ -23,19 +23,30 @@ let a = 1 # This is an inline comment
 
 ## Data Types
 
-Currently, Ado focuses exclusively on numeric processing and primarily supports integers.
+Currently, Ado supports integers, arrays, and booleans.
 
 - **Integers**: Ado supports positive and negative integer literals (e.g., `42`, `-10`).
+- **Arrays**: Ado supports integer arrays. Arrays are defined with square brackets `[]` and accessed using a 0-based index. Elements can be added to the end of an array using `push()`. You can get the length of an array using `len()`.
 - **Strings (Limited)**: Strings like `"hello"` can be used as arguments to the `print` function but cannot currently be assigned to variables or manipulated.
 - **Booleans**: `true` and `false` literals exist primarily within `if` and `while` expression evaluation context.
 
-## Variables
+## Variables and Arrays
 
 Variables are statically bound within their block scopes. They are introduced with the `let` keyword.
 
 ```ado
 let answer = 42
 let default_val = 0
+
+# Arrays
+let arr = [1, 2, 3]
+print(arr[0]) # Prints 1
+arr[1] = 10
+print(arr[1]) # Prints 10
+
+# Push and Length
+push(arr, 4)
+print(len(arr)) # Prints 4
 ```
 
 ## Operators

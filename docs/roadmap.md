@@ -5,8 +5,9 @@ Ado is evolving. Here is a high-level roadmap of planned features and enhancemen
 ## Phase 1: Core Language Enhancements
 
 - **Strings as Variables:** Allow strings to be assigned to variables, concatenated, and manipulated.
-- **Arrays & Collections:** Introduce basic dynamic arrays or fixed-size lists for storing multiple data points.
 - **Floating-Point Arithmetic:** Support for `float` / `double` numbers for complex math.
+
+*(Completed: Arrays are now supported.)*
 
 ## Phase 2: Architecture and Tooling
 
