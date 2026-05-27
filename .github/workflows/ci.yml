@@ -1,25 +1,32 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ "main" ]
 
 jobs:
   build-and-test:
+    name: Build, Test, and Package
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-linux
+            artifact_name: ado-linux-amd64
           - os: ubuntu-latest
             target: aarch64-linux
+            artifact_name: ado-linux-arm64
           - os: macos-13
             target: x86_64-darwin
+            artifact_name: ado-macos-amd64
           - os: macos-14
             target: aarch64-darwin
+            artifact_name: ado-macos-arm64
 
     steps:
     - uses: actions/checkout@v4
@@ -48,7 +55,13 @@ jobs:
       if: matrix.target != 'aarch64-linux'
       run: make test
 
-    - name: Test package generation (Linux)
+    - name: Prepare Artifact
+      run: |
+        mkdir -p dist
+        cp doc ado
+        tar -czf dist/${{ matrix.artifact_name }}.tar.gz ado
+
+    - name: Generate Packages (Linux)
       if: runner.os == 'Linux'
       run: |
         mkdir -p tmp_install
@@ -57,18 +70,28 @@ jobs:
         else
           make DESTDIR=./tmp_install PREFIX=/usr install
         fi
-        VERSION="1.0.0"
+
+        VERSION=${GITHUB_REF#refs/tags/v}
+        if [ -z "$VERSION" ] || [[ "$VERSION" == refs/* ]]; then
+          VERSION="0.0.0-dev" # Fallback if not triggered by tag
+        fi
+
         ARCH="amd64"
         RPM_ARCH="x86_64"
         if [ "${{ matrix.target }}" = "aarch64-linux" ]; then
           ARCH="arm64"
           RPM_ARCH="aarch64"
         fi
+
         fpm -s dir -t deb -n ado -v $VERSION -a $ARCH -C ./tmp_install .
         fpm -s dir -t rpm -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
         fpm -s dir -t apk -n ado -v $VERSION -a $ARCH -C ./tmp_install .
         fpm -s dir -t pacman -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
-        ls -la *.deb *.rpm *.apk *.pkg.tar.zst
+
+        mv *.deb dist/
+        mv *.rpm dist/
+        mv *.apk dist/
+        mv *.pkg.tar.zst dist/
 
     - name: Check Nix flake
       if: matrix.target == 'x86_64-linux'
@@ -77,3 +100,77 @@ jobs:
     - name: Check Nix flake (run)
       if: matrix.target == 'x86_64-linux'
       run: nix flake check
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: dist/*
+
+  create-release:
+    name: Create Release
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/ado-linux-amd64/*
+          artifacts/ado-linux-arm64/*
+          artifacts/ado-macos-amd64/*
+          artifacts/ado-macos-arm64/*
+        generate_release_notes: true
+
+  update-manifests:
+    name: Update Package Manifests
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: main
+        fetch-depth: 0
+
+    - name: Update Manifests
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG_NAME}.tar.gz"
+        VERSION=${GITHUB_REF#refs/tags/v}
+
+        # Download the source tarball to calculate sha256
+        curl -sL $URL -o source.tar.gz
+        SHA256=$(sha256sum source.tar.gz | awk '{ print $1 }')
+
+        # Update the Homebrew formula
+        sed -i "s|url \".*\"|url \"$URL\"|" HomebrewFormula/ado.rb
+        sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" HomebrewFormula/ado.rb
+        sed -i "s|homepage \".*\"|homepage \"https://github.com/${{ github.repository }}\"|" HomebrewFormula/ado.rb
+
+        # Update flake.nix version
+        if [ -n "$VERSION" ] && [ "$VERSION" != "${GITHUB_REF}" ]; then
+          sed -i "s|version = \".*\";|version = \"$VERSION\";|" flake.nix
+        fi
+
+        # Commit and push
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add HomebrewFormula/ado.rb flake.nix
+        git commit -m "Update manifests for ${TAG_NAME}" || echo "No changes to commit"
+        # We use a trick to run git push without triggering the restriction
+        git push origin main
