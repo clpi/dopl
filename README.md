@@ -15,7 +15,8 @@ A lightweight, performant programming language that compiles to C.
 ### Language Features
 - Functions with parameters and recursion
 - Variables with `let`
-- Control flow: `if/else`, `while` loops
+- Control flow: `if/else`, `while` loops, `for` loops
+- Arrays: implicit memory pointers via `[val1, val2]`, `len(arr)`, `push(arr, val)`
 - Rich operators: arithmetic, comparison, logical
 - Built-in I/O with `print()`
 - Comments with `#`

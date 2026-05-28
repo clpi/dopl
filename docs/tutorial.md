@@ -37,14 +37,23 @@ Hello, World from Ado!
 
 ## Variables and Types
 
-Currently, Ado primarily supports integer types. Variables are declared using the `let` keyword.
+Currently, Ado primarily supports integer types and arrays. Variables are declared using the `let` keyword.
+Ado leverages type inference behind the scenes to give you powerful granular control, which means arrays and complex expressions are as fast as native C implicitly-typed variables!
 
 ```ado
 fn main() {
+  # Define an integer
   let a = 10
   let b = 20
   let sum = a + b
   print("The sum of a and b is:", sum)
+
+  # Define an array (internally points to memory like a C array)
+  let arr = [1, 2, 3, 4]
+
+  # Read from an array
+  print(arr[2]) # Prints 3
+
   return 0
 }
 ```
@@ -78,6 +87,20 @@ fn is_even(n) {
   } else {
     return false
   }
+}
+```
+
+### For Loop
+
+The `for` loop in Ado gives you a unique but intuitive syntax to iterate over ranges:
+
+```ado
+fn sum_to_ten() {
+  let sum = 0
+  for i in 0 .. 10 {
+      sum = sum + i
+  }
+  print("Sum is: ", sum)
 }
 ```
 

@@ -1,8 +1,8 @@
-# PL Language Server - Feature Showcase
+# Ado Language Server - Feature Showcase
 
 ## Overview
 
-The PL Language Server provides comprehensive IDE support through the Language Server Protocol (LSP). It offers real-time code intelligence, diagnostics, and refactoring capabilities.
+The Ado Language Server provides comprehensive IDE support through the Language Server Protocol (LSP). It offers real-time code intelligence, diagnostics, and refactoring capabilities.
 
 ## Features
 
@@ -11,7 +11,7 @@ The PL Language Server provides comprehensive IDE support through the Language S
 **Keywords**: `fn`, `let`, `if`, `else`, `return`
 
 **Function Completion with Snippets**:
-```pl
+```ado
 fn add(a, b) {
   return a + b
 }
@@ -31,7 +31,7 @@ Jump to where symbols are defined:
 ### 3. Find All References
 
 Find every usage of a symbol:
-```pl
+```ado
 fn factorial(n) {  # Definition
   if n <= 1 {
     return 1
@@ -66,7 +66,7 @@ Provides a structured view of your code:
 ### 6. Real-time Diagnostics
 
 **Error Detection**:
-```pl
+```ado
 fn test() {
   let x  # ❌ Error: let statement requires assignment
 }
@@ -77,7 +77,7 @@ fn main() {
 ```
 
 **Brace Matching**:
-```pl
+```ado
 fn broken() {
   if x > 0 {
     return 1
@@ -90,7 +90,7 @@ fn broken() {
 Auto-format with proper indentation:
 
 **Before**:
-```pl
+```ado
 fn messy(x){
 if x>0{
 return x
@@ -100,7 +100,7 @@ return 0
 ```
 
 **After**:
-```pl
+```ado
 fn messy(x) {
   if x > 0 {
     return x
@@ -112,7 +112,7 @@ fn messy(x) {
 ### 8. Symbol Renaming
 
 Rename symbols across all files:
-```pl
+```ado
 fn calculate(value) {  # Rename 'value' to 'input'
   return value * 2     # Automatically updates here
 }
@@ -127,14 +127,14 @@ fn main() {
 The LSP tracks symbols across your entire workspace:
 
 **math.do**:
-```pl
+```ado
 fn add(a, b) {
   return a + b
 }
 ```
 
 **main.do**:
-```pl
+```ado
 fn main() {
   return add(5, 10)  # Completion works, go-to-definition jumps to math.do
 }
@@ -201,7 +201,7 @@ Tests all major features:
 └──────┬──────┘
        │ LSP Protocol (JSON-RPC)
 ┌──────▼──────┐
-│  PL LSP     │
+│  Ado LSP     │
 │  Server     │
 ├─────────────┤
 │ Symbol      │ ← Functions, variables, parameters

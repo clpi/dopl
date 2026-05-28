@@ -26,6 +26,7 @@ let a = 1 # This is an inline comment
 Currently, Ado focuses exclusively on numeric processing and primarily supports integers.
 
 - **Integers**: Ado supports positive and negative integer literals (e.g., `42`, `-10`).
+- **Arrays**: Ado supports integer arrays. They are zero-indexed and act mostly like C arrays under the hood. You can define arrays with `[val1, val2]`.
 - **Strings (Limited)**: Strings like `"hello"` can be used as arguments to the `print` function but cannot currently be assigned to variables or manipulated.
 - **Booleans**: `true` and `false` literals exist primarily within `if` and `while` expression evaluation context.
 
@@ -115,6 +116,24 @@ The `print` function takes one or more arguments separated by commas and prints 
 
 ```ado
 print("The value is:", 42)
+```
+
+### `len(arr)`
+The `len` function returns the length of a given array.
+
+```ado
+let arr = [1, 2, 3]
+print(len(arr)) # Prints 3
+```
+
+### `push(arr, val)`
+The `push` function pushes a value onto the end of a given array.
+
+```ado
+let arr = []
+push(arr, 5)
+push(arr, 10)
+print(arr[1]) # Prints 10
 ```
 
 ## Compilation Process

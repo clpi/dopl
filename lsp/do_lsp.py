@@ -83,22 +83,22 @@ class AdoLSP:
             self.symbols[sym.name].append(sym)
     def get_diagnostics(self, uri: str, text: str) -> List[dict]:
         diagnostics = []
-            # First check for unbalanced braces just in case
-            lines = text.split('\n')
-            brace_stack = []
-            for i, line in enumerate(lines):
-                for j, char in enumerate(line):
-                    if char == '{': brace_stack.append((i, j))
-                    elif char == '}':
-                        if brace_stack: brace_stack.pop()
-                        else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
-                            'end': {'line': i, 'character': j+1}}, 'severity': 1,
-                            'message': 'Unexpected closing brace', 'source': 'ado-lsp'})
-            if brace_stack:
-                i, j = brace_stack.pop()
-                diagnostics.append({'range': {'start': {'line': i, 'character': j},
-                    'end': {'line': i, 'character': j+1}}, 'severity': 1,
-                    'message': 'Unclosed brace', 'source': 'ado-lsp'})
+        # First check for unbalanced braces just in case
+        lines = text.split('\n')
+        brace_stack = []
+        for i, line in enumerate(lines):
+            for j, char in enumerate(line):
+                if char == '{': brace_stack.append((i, j))
+                elif char == '}':
+                    if brace_stack: brace_stack.pop()
+                    else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
+                        'end': {'line': i, 'character': j+1}}, 'severity': 1,
+                        'message': 'Unexpected closing brace', 'source': 'ado-lsp'})
+        if brace_stack:
+            i, j = brace_stack.pop()
+            diagnostics.append({'range': {'start': {'line': i, 'character': j},
+                'end': {'line': i, 'character': j+1}}, 'severity': 1,
+                'message': 'Unmatched opening brace', 'source': 'ado-lsp'})
 
             # Check for unbalanced parenthesis
             paren_stack = []
