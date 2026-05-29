@@ -21,7 +21,7 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-linux
             artifact_name: ado-linux-arm64
-          - os: macos-13
+          - os: macos-15-intel
             target: x86_64-darwin
             artifact_name: ado-macos-amd64
           - os: macos-14
@@ -122,7 +122,7 @@ jobs:
         path: artifacts
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           artifacts/ado-linux-amd64/*
