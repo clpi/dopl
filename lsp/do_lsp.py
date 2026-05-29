@@ -86,6 +86,7 @@ class AdoLSP:
         # First check for unbalanced braces just in case
         lines = text.split('\n')
         brace_stack = []
+        paren_stack = []
         for i, line in enumerate(lines):
             for j, char in enumerate(line):
                 if char == '{': brace_stack.append((i, j))
@@ -94,28 +95,23 @@ class AdoLSP:
                     else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
                         'end': {'line': i, 'character': j+1}}, 'severity': 1,
                         'message': 'Unexpected closing brace', 'source': 'ado-lsp'})
+                elif char == '(': paren_stack.append((i, j))
+                elif char == ')':
+                    if paren_stack: paren_stack.pop()
+                    else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
+                        'end': {'line': i, 'character': j+1}}, 'severity': 1,
+                        'message': 'Unexpected closing parenthesis', 'source': 'ado-lsp'})
         if brace_stack:
             i, j = brace_stack.pop()
             diagnostics.append({'range': {'start': {'line': i, 'character': j},
                 'end': {'line': i, 'character': j+1}}, 'severity': 1,
                 'message': 'Unmatched opening brace', 'source': 'ado-lsp'})
 
-            # Check for unbalanced parenthesis
-            paren_stack = []
-            for i, line in enumerate(lines):
-                for j, char in enumerate(line):
-                    if char == '(': paren_stack.append((i, j))
-                    elif char == ')':
-                        if paren_stack: paren_stack.pop()
-                        else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
-                            'end': {'line': i, 'character': j+1}}, 'severity': 1,
-                            'message': 'Unexpected closing parenthesis', 'source': 'ado-lsp'})
-            if paren_stack:
-                i, j = paren_stack.pop()
-                diagnostics.append({'range': {'start': {'line': i, 'character': j},
-                    'end': {'line': i, 'character': j+1}}, 'severity': 1,
-                    'message': 'Unclosed parenthesis', 'source': 'ado-lsp'})
-
+        if paren_stack:
+            i, j = paren_stack.pop()
+            diagnostics.append({'range': {'start': {'line': i, 'character': j},
+                'end': {'line': i, 'character': j+1}}, 'severity': 1,
+                'message': 'Unclosed parenthesis', 'source': 'ado-lsp'})
         return diagnostics
 
 
