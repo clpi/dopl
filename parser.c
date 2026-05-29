@@ -352,8 +352,6 @@ static AST *parse_stmt(Parser *p) {
             advance(p);
             return ast;
         }
-        // Just a variable reference - need to parse it as an expression
-        // Backtrack and parse as expression
         *p = saved_parser;
         return parse_expr(p);
     }
