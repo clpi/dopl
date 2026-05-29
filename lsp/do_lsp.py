@@ -39,40 +39,64 @@ class AdoLSP:
     def parse_symbols(self, uri: str, text: str):
         symbols = []
         lines = text.split('\n')
+        fn_pattern = re.compile(r'fn\s+(\w+)\s*\(([^)]*)\)')
+        let_pattern = re.compile(r'let\s+(\w+)\s*=')
+
+        brace_count = 0
+        active_functions = []
 
         for i, line in enumerate(lines):
-            match = re.search(r'fn\s+(\w+)\s*\(([^)]*)\)', line)
+            match = fn_pattern.search(line)
             if match:
                 name = match.group(1)
                 params_str = match.group(2)
                 params = [p.strip() for p in params_str.split(',') if p.strip()]
                 col = match.start(1)
-                brace_count = 0
-                end_line = i
-                started = False
-                for j in range(i, len(lines)):
-                    if '{' in lines[j]: started = True
-                    brace_count += lines[j].count('{') - lines[j].count('}')
-                    if started and brace_count == 0:
-                        end_line = j
-                        break
                 docstring = ""
                 for k in range(i-1, -1, -1):
                     if lines[k].strip().startswith('#'):
                         docstring = lines[k].strip()[1:].strip() + " " + docstring
                     elif lines[k].strip() == "": continue
                     else: break
-                symbols.append(Symbol(name=name, kind='function', uri=uri,
-                    line=i, col=col, end_line=end_line, end_col=len(lines[end_line]),
-                    params=params, docstring=docstring.strip()))
+
+                sym = Symbol(name=name, kind='function', uri=uri,
+                    line=i, col=col, end_line=i, end_col=len(line),
+                    params=params, docstring=docstring.strip())
+                symbols.append(sym)
+
+                active_functions.append({
+                    'symbol': sym,
+                    'started': False,
+                    'base_count': brace_count
+                })
+
                 for param in params:
-                    param_match = re.search(r'\b' + re.escape(param) + r'\b', line)
+                    param_pattern = re.compile(r'\b' + re.escape(param) + r'\b')
+                    param_match = param_pattern.search(line)
                     if param_match:
                         symbols.append(Symbol(name=param, kind='parameter', uri=uri,
                             line=i, col=param_match.start(), end_line=i, end_col=param_match.end()))
 
+            if '{' in line:
+                for func_data in active_functions:
+                    if not func_data['started']:
+                        func_data['started'] = True
+                        func_data['base_count'] = brace_count
+
+            brace_count += line.count('{') - line.count('}')
+
+            if active_functions:
+                remaining_functions = []
+                for func_data in active_functions:
+                    if func_data['started'] and brace_count == func_data['base_count']:
+                        func_data['symbol'].end_line = i
+                        func_data['symbol'].end_col = len(line)
+                    else:
+                        remaining_functions.append(func_data)
+                active_functions = remaining_functions
+
         for i, line in enumerate(lines):
-            match = re.search(r'let\s+(\w+)\s*=', line)
+            match = let_pattern.search(line)
             if match:
                 symbols.append(Symbol(name=match.group(1), kind='variable', uri=uri,
                     line=i, col=match.start(1), end_line=i, end_col=match.end(1)))
@@ -83,22 +107,22 @@ class AdoLSP:
             self.symbols[sym.name].append(sym)
     def get_diagnostics(self, uri: str, text: str) -> List[dict]:
         diagnostics = []
-            # First check for unbalanced braces just in case
-            lines = text.split('\n')
-            brace_stack = []
-            for i, line in enumerate(lines):
-                for j, char in enumerate(line):
-                    if char == '{': brace_stack.append((i, j))
-                    elif char == '}':
-                        if brace_stack: brace_stack.pop()
-                        else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
-                            'end': {'line': i, 'character': j+1}}, 'severity': 1,
-                            'message': 'Unexpected closing brace', 'source': 'ado-lsp'})
-            if brace_stack:
-                i, j = brace_stack.pop()
-                diagnostics.append({'range': {'start': {'line': i, 'character': j},
-                    'end': {'line': i, 'character': j+1}}, 'severity': 1,
-                    'message': 'Unclosed brace', 'source': 'ado-lsp'})
+        # First check for unbalanced braces just in case
+        lines = text.split('\n')
+        brace_stack = []
+        for i, line in enumerate(lines):
+            for j, char in enumerate(line):
+                if char == '{': brace_stack.append((i, j))
+                elif char == '}':
+                    if brace_stack: brace_stack.pop()
+                    else: diagnostics.append({'range': {'start': {'line': i, 'character': j},
+                        'end': {'line': i, 'character': j+1}}, 'severity': 1,
+                        'message': 'Unexpected closing brace', 'source': 'ado-lsp'})
+        if brace_stack:
+            i, j = brace_stack.pop()
+            diagnostics.append({'range': {'start': {'line': i, 'character': j},
+                'end': {'line': i, 'character': j+1}}, 'severity': 1,
+                'message': 'Unmatched opening brace', 'source': 'ado-lsp'})
 
             # Check for unbalanced parenthesis
             paren_stack = []

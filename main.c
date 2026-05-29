@@ -11,14 +11,27 @@ char *read_file(char *path) {
     fseek(f, 0, SEEK_END);
     long len = ftell(f);
     fseek(f, 0, SEEK_SET);
+    if (len < 0 || len > 10 * 1024 * 1024) {
+        fclose(f);
+        fprintf(stderr, "Error: File too large or read error\n");
+        return NULL;
+    }
     char *buf = malloc(len + 1);
-    fread(buf, 1, len, f);
+    size_t read_len = fread(buf, 1, len, f);
+    if (read_len != (size_t)len) {
+        free(buf);
+        fclose(f);
+        fprintf(stderr, "Error: Failed to read file completely\n");
+        return NULL;
+    }
     buf[len] = '\0';
     fclose(f);
     return buf;
 }
 
 #include <unistd.h>
+
+#define MAX_PATH_LEN 1024
 
 int compile_and_run(AST *ast) {
     char temp_dir[] = "/tmp/ado_XXXXXX";
@@ -27,8 +40,8 @@ int compile_and_run(AST *ast) {
         return -1;
     }
 
-    char src_path[1024];
-    char bin_path[1024];
+    char src_path[MAX_PATH_LEN];
+    char bin_path[MAX_PATH_LEN];
     snprintf(src_path, sizeof(src_path), "%s/out.c", temp_dir);
     snprintf(bin_path, sizeof(bin_path), "%s/out", temp_dir);
 

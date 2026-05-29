@@ -1,12 +1,12 @@
-# DO Language - Complete Setup Guide
+# Ado Language - Complete Setup Guide
 
 ## Overview
 
-DO is a minimal, performant programming language that compiles to C. It features a complete development environment with IDE support.
+Ado is a minimal, performant programming language that compiles to C. It features a complete development environment with IDE support.
 
 ## File Extension
 
-All DO source files use the `.do` extension.
+All Ado source files use the `.do` extension.
 
 ## Quick Start
 
@@ -18,7 +18,7 @@ All DO source files use the `.do` extension.
 ./do-edit example.do
 
 # 3. Or compile and run
-./plc example.do
+./doc example.do
 ```
 
 ## Development Environment
@@ -38,7 +38,7 @@ Launch Neovim with:
 - `<leader>rn` - Rename symbol
 - `<leader>f` - Format document
 
-### LSP Server (`lsp/pl-lsp.py`)
+### LSP Server (`lsp/do_lsp.py`)
 
 Comprehensive Language Server Protocol implementation:
 - Code completion with snippets
@@ -66,8 +66,8 @@ cd tree-sitter-do
 ## Project Structure
 
 ```
-pl/
-├── plc                    # Compiler executable
+ado/
+├── doc                    # Compiler executable
 ├── do-edit               # Neovim launcher with full IDE support
 ├── build.sh              # Build compiler
 ├── example.do            # Main example file
@@ -76,7 +76,7 @@ pl/
 │   ├── collatz.do
 │   └── conditionals.do
 ├── lsp/                  # Language Server
-│   ├── pl-lsp.py        # LSP implementation
+│   ├── do_lsp.py        # LSP implementation
 │   ├── test_lsp.py      # Test suite
 │   ├── README.md
 │   └── FEATURES.md
@@ -96,7 +96,8 @@ pl/
 
 - Functions with parameters
 - Variables with `let`
-- Control flow: `if/else`
+- Control flow: `if/else`, `while`, `for`
+- Arrays with `[]`, indexing, and built-ins (`len`, `push`)
 - Arithmetic and comparison operators
 - Function calls
 - Recursion
@@ -129,7 +130,7 @@ au BufRead,BufNewFile *.do set filetype=do
 Configure LSP in `settings.json` (see `lsp/README.md`)
 
 ### Other Editors
-Any LSP-compatible editor can use the DO LSP server
+Any LSP-compatible editor can use the Ado LSP server
 
 ## Testing
 
@@ -175,4 +176,4 @@ See `examples/` directory for:
 
 ## Performance
 
-DO compiles to optimized C code, providing near-native performance. The generated C code is clean and readable, making it easy to understand the compilation process.
+Ado compiles to optimized C code, providing near-native performance. The generated C code is clean and readable, making it easy to understand the compilation process.

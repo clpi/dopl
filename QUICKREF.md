@@ -1,4 +1,4 @@
-# DO Language Quick Reference
+# Ado Language Quick Reference
 
 ## File Extension
 `.do`
@@ -42,15 +42,18 @@ if x > 0 {
 
 ## Types
 - Integers: `42`, `-10`
+- Arrays: `[1, 2, 3]`
 
 ## Built-in Functions
-Currently none - all functions are user-defined
+- `print(...)`: Prints values to the console
+- `len(arr)`: Returns the length of an array
+- `push(arr, val)`: Pushes a value to the end of an array
 
 ## Editor Commands
 
 ### Compile and Run
 ```bash
-./plc file.do
+./doc file.do
 ```
 
 ### Edit with IDE Support
@@ -60,7 +63,7 @@ Currently none - all functions are user-defined
 
 ### REPL
 ```bash
-./plc
+./doc
 ```
 
 ## LSP Keybindings (in Neovim)
@@ -130,14 +133,14 @@ fn power(base, exp) {
 
 ## Performance Tips
 
-- DO compiles to optimized C code
+- Ado compiles to optimized C code
 - Recursion is efficient (tail call optimization depends on C compiler)
 - Integer arithmetic is fast (native CPU operations)
 
 ## Limitations
 
-- Only integer types currently
-- No strings, arrays, or structs yet
+- Only integer and integer array types currently
+- No strings, maps, or structs yet
 - No standard library
 - No module system
 

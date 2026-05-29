@@ -61,7 +61,7 @@ jobs:
         cp doc ado
         tar -czf dist/${{ matrix.artifact_name }}.tar.gz ado
 
-    - name: Generate Packages (Linux)
+    - name: Generate packages (Linux)
       if: runner.os == 'Linux'
       run: |
         mkdir -p tmp_install
@@ -70,12 +70,10 @@ jobs:
         else
           make DESTDIR=./tmp_install PREFIX=/usr install
         fi
-
         VERSION=${GITHUB_REF#refs/tags/v}
-        if [ -z "$VERSION" ] || [[ "$VERSION" == refs/* ]]; then
-          VERSION="0.0.0-dev" # Fallback if not triggered by tag
+        if [ -z "$VERSION" ] || [ "$VERSION" = "${GITHUB_REF}" ]; then
+          VERSION="1.0.0" # Fallback if not triggered by tag
         fi
-
         ARCH="amd64"
         RPM_ARCH="x86_64"
         if [ "${{ matrix.target }}" = "aarch64-linux" ]; then
@@ -87,11 +85,17 @@ jobs:
         fpm -s dir -t rpm -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
         fpm -s dir -t apk -n ado -v $VERSION -a $ARCH -C ./tmp_install .
         fpm -s dir -t pacman -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
-
+        ls -la *.deb *.rpm *.apk *.pkg.tar.zst
         mv *.deb dist/
         mv *.rpm dist/
         mv *.apk dist/
         mv *.pkg.tar.zst dist/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: dist/*
 
     - name: Check Nix flake
       if: matrix.target == 'x86_64-linux'
@@ -100,12 +104,6 @@ jobs:
     - name: Check Nix flake (run)
       if: matrix.target == 'x86_64-linux'
       run: nix flake check
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: dist/*
 
   create-release:
     name: Create Release
@@ -172,5 +170,4 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add HomebrewFormula/ado.rb flake.nix
         git commit -m "Update manifests for ${TAG_NAME}" || echo "No changes to commit"
-        # We use a trick to run git push without triggering the restriction
         git push origin main

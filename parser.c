@@ -24,21 +24,33 @@ static AST *new_ast(ASTType type) {
 static char *esc_str(char *s) {
     int len = strlen(s);
     char *out = malloc(len + 1);
-    int j = 0;
-    for (int i = 0; i < len; i++) {
-        if (s[i] == '\\' && i + 1 < len) {
-            switch (s[i+1]) {
-                case 'n': out[j++] = '\n'; i++; break;
-                case 't': out[j++] = '\t'; i++; break;
-                case '"': out[j++] = '"'; i++; break;
-                case '\\': out[j++] = '\\'; i++; break;
-                default: out[j++] = s[i]; break;
+    char *p = s;
+    char *q = out;
+
+    while (1) {
+        char *next_bs = strchr(p, '\\');
+        if (!next_bs) {
+            strcpy(q, p);
+            break;
+        }
+
+        size_t dist = next_bs - p;
+        memcpy(q, p, dist);
+        q += dist;
+        p = next_bs;
+
+        if (*(p+1)) {
+            switch (*(p+1)) {
+                case 'n': *q++ = '\n'; p += 2; break;
+                case 't': *q++ = '\t'; p += 2; break;
+                case '"': *q++ = '"'; p += 2; break;
+                case '\\': *q++ = '\\'; p += 2; break;
+                default: *q++ = *p; p += 1; break;
             }
         } else {
-            out[j++] = s[i];
+            *q++ = *p++;
         }
     }
-    out[j] = '\0';
     return out;
 }
 
@@ -194,7 +206,7 @@ static AST *parse_expr(Parser *p) {
 static AST *parse_block(Parser *p) {
     advance(p);
     AST *ast = new_ast(AST_BLOCK);
-    int cap = 4;
+    int cap = 64;
     ast->block.stmts = malloc(cap * sizeof(AST*));
     ast->block.count = 0;
     while (p->cur.type != TOK_RBRACE && p->cur.type != TOK_EOF) {
@@ -362,7 +374,7 @@ static AST *parse_stmt(Parser *p) {
 
 AST *parse_program(Parser *p) {
     AST *prog = new_ast(AST_BLOCK);
-    int cap = 4;
+    int cap = 64;
     prog->block.stmts = malloc(cap * sizeof(AST*));
     prog->block.count = 0;
     
