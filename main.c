@@ -11,8 +11,19 @@ char *read_file(char *path) {
     fseek(f, 0, SEEK_END);
     long len = ftell(f);
     fseek(f, 0, SEEK_SET);
+    if (len < 0 || len > 10 * 1024 * 1024) {
+        fclose(f);
+        fprintf(stderr, "Error: File too large or read error\n");
+        return NULL;
+    }
     char *buf = malloc(len + 1);
-    fread(buf, 1, len, f);
+    size_t read_len = fread(buf, 1, len, f);
+    if (read_len != (size_t)len) {
+        free(buf);
+        fclose(f);
+        fprintf(stderr, "Error: Failed to read file completely\n");
+        return NULL;
+    }
     buf[len] = '\0';
     fclose(f);
     return buf;
