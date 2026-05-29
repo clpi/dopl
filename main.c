@@ -20,6 +20,8 @@ char *read_file(char *path) {
 
 #include <unistd.h>
 
+#define MAX_PATH_LEN 1024
+
 int compile_and_run(AST *ast) {
     char temp_dir[] = "/tmp/ado_XXXXXX";
     if (mkdtemp(temp_dir) == NULL) {
@@ -27,8 +29,8 @@ int compile_and_run(AST *ast) {
         return -1;
     }
 
-    char src_path[1024];
-    char bin_path[1024];
+    char src_path[MAX_PATH_LEN];
+    char bin_path[MAX_PATH_LEN];
     snprintf(src_path, sizeof(src_path), "%s/out.c", temp_dir);
     snprintf(bin_path, sizeof(bin_path), "%s/out", temp_dir);
 
