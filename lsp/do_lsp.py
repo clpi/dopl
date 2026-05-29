@@ -39,9 +39,11 @@ class AdoLSP:
     def parse_symbols(self, uri: str, text: str):
         symbols = []
         lines = text.split('\n')
+        fn_pattern = re.compile(r'fn\s+(\w+)\s*\(([^)]*)\)')
+        let_pattern = re.compile(r'let\s+(\w+)\s*=')
 
         for i, line in enumerate(lines):
-            match = re.search(r'fn\s+(\w+)\s*\(([^)]*)\)', line)
+            match = fn_pattern.search(line)
             if match:
                 name = match.group(1)
                 params_str = match.group(2)
@@ -66,13 +68,14 @@ class AdoLSP:
                     line=i, col=col, end_line=end_line, end_col=len(lines[end_line]),
                     params=params, docstring=docstring.strip()))
                 for param in params:
-                    param_match = re.search(r'\b' + re.escape(param) + r'\b', line)
+                    param_pattern = re.compile(r'\b' + re.escape(param) + r'\b')
+                    param_match = param_pattern.search(line)
                     if param_match:
                         symbols.append(Symbol(name=param, kind='parameter', uri=uri,
                             line=i, col=param_match.start(), end_line=i, end_col=param_match.end()))
 
         for i, line in enumerate(lines):
-            match = re.search(r'let\s+(\w+)\s*=', line)
+            match = let_pattern.search(line)
             if match:
                 symbols.append(Symbol(name=match.group(1), kind='variable', uri=uri,
                     line=i, col=match.start(1), end_line=i, end_col=match.end(1)))
