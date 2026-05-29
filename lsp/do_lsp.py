@@ -42,6 +42,9 @@ class AdoLSP:
         fn_pattern = re.compile(r'fn\s+(\w+)\s*\(([^)]*)\)')
         let_pattern = re.compile(r'let\s+(\w+)\s*=')
 
+        brace_count = 0
+        active_functions = []
+
         for i, line in enumerate(lines):
             match = fn_pattern.search(line)
             if match:
@@ -49,30 +52,48 @@ class AdoLSP:
                 params_str = match.group(2)
                 params = [p.strip() for p in params_str.split(',') if p.strip()]
                 col = match.start(1)
-                brace_count = 0
-                end_line = i
-                started = False
-                for j in range(i, len(lines)):
-                    if '{' in lines[j]: started = True
-                    brace_count += lines[j].count('{') - lines[j].count('}')
-                    if started and brace_count == 0:
-                        end_line = j
-                        break
                 docstring = ""
                 for k in range(i-1, -1, -1):
                     if lines[k].strip().startswith('#'):
                         docstring = lines[k].strip()[1:].strip() + " " + docstring
                     elif lines[k].strip() == "": continue
                     else: break
-                symbols.append(Symbol(name=name, kind='function', uri=uri,
-                    line=i, col=col, end_line=end_line, end_col=len(lines[end_line]),
-                    params=params, docstring=docstring.strip()))
+
+                sym = Symbol(name=name, kind='function', uri=uri,
+                    line=i, col=col, end_line=i, end_col=len(line),
+                    params=params, docstring=docstring.strip())
+                symbols.append(sym)
+
+                active_functions.append({
+                    'symbol': sym,
+                    'started': False,
+                    'base_count': brace_count
+                })
+
                 for param in params:
                     param_pattern = re.compile(r'\b' + re.escape(param) + r'\b')
                     param_match = param_pattern.search(line)
                     if param_match:
                         symbols.append(Symbol(name=param, kind='parameter', uri=uri,
                             line=i, col=param_match.start(), end_line=i, end_col=param_match.end()))
+
+            if '{' in line:
+                for func_data in active_functions:
+                    if not func_data['started']:
+                        func_data['started'] = True
+                        func_data['base_count'] = brace_count
+
+            brace_count += line.count('{') - line.count('}')
+
+            if active_functions:
+                remaining_functions = []
+                for func_data in active_functions:
+                    if func_data['started'] and brace_count == func_data['base_count']:
+                        func_data['symbol'].end_line = i
+                        func_data['symbol'].end_col = len(line)
+                    else:
+                        remaining_functions.append(func_data)
+                active_functions = remaining_functions
 
         for i, line in enumerate(lines):
             match = let_pattern.search(line)
