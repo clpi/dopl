@@ -1,4 +1,4 @@
-# Vim Syntax Highlighting for PL
+# Vim Syntax Highlighting for Ado
 
 ## Installation
 
@@ -8,8 +8,8 @@ Copy the syntax files to your Vim runtime directory:
 
 ```bash
 mkdir -p ~/.vim/syntax ~/.vim/ftplugin
-cp vim/syntax/pl.vim ~/.vim/syntax/
-cp vim/ftplugin/pl.vim ~/.vim/ftplugin/
+cp vim/syntax/ado.vim ~/.vim/syntax/
+cp vim/ftplugin/ado.vim ~/.vim/ftplugin/
 ```
 
 Add to your `.vimrc` or `init.vim`:
@@ -22,8 +22,8 @@ au BufRead,BufNewFile *.do set filetype=do
 
 ```bash
 mkdir -p ~/.config/nvim/syntax ~/.config/nvim/ftplugin
-cp vim/syntax/pl.vim ~/.config/nvim/syntax/
-cp vim/ftplugin/pl.vim ~/.config/nvim/ftplugin/
+cp vim/syntax/ado.vim ~/.config/nvim/syntax/
+cp vim/ftplugin/ado.vim ~/.config/nvim/ftplugin/
 ```
 
 Add to your `init.lua`:
@@ -31,7 +31,7 @@ Add to your `init.lua`:
 ```lua
 vim.filetype.add({
   extension = {
-    pl = 'pl',
+    do = 'ado',
   },
 })
 ```
