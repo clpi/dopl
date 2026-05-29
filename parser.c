@@ -194,7 +194,7 @@ static AST *parse_expr(Parser *p) {
 static AST *parse_block(Parser *p) {
     advance(p);
     AST *ast = new_ast(AST_BLOCK);
-    int cap = 4;
+    int cap = 64;
     ast->block.stmts = malloc(cap * sizeof(AST*));
     ast->block.count = 0;
     while (p->cur.type != TOK_RBRACE && p->cur.type != TOK_EOF) {
@@ -362,7 +362,7 @@ static AST *parse_stmt(Parser *p) {
 
 AST *parse_program(Parser *p) {
     AST *prog = new_ast(AST_BLOCK);
-    int cap = 4;
+    int cap = 64;
     prog->block.stmts = malloc(cap * sizeof(AST*));
     prog->block.count = 0;
     
