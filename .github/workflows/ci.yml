@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 
 jobs:
   build-and-test:
+    name: Build, Test, and Package
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -79,6 +80,7 @@ jobs:
           ARCH="arm64"
           RPM_ARCH="aarch64"
         fi
+
         fpm -s dir -t deb -n ado -v $VERSION -a $ARCH -C ./tmp_install .
         fpm -s dir -t rpm -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
         fpm -s dir -t apk -n ado -v $VERSION -a $ARCH -C ./tmp_install .
