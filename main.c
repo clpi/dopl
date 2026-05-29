@@ -5,6 +5,11 @@
 #include "parser.h"
 #include "codegen.h"
 
+#define MAX_PATH_LEN 1024
+#define MAX_CMD_LEN 4096
+#define MAX_LINE_LEN 4096
+#define MAX_BUFFER_LEN 65536
+
 char *read_file(char *path) {
     FILE *f = fopen(path, "r");
     if (!f) return NULL;
@@ -54,7 +59,7 @@ int compile_and_run(AST *ast) {
     codegen(ast, out);
     fclose(out);
 
-    char cmd[4096];
+    char cmd[MAX_CMD_LEN];
     snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s 2>/dev/null", bin_path, src_path);
     int ret = system(cmd);
 
@@ -71,8 +76,8 @@ int compile_and_run(AST *ast) {
 }
 
 void repl(void) {
-    char line[4096];
-    char buffer[65536];
+    char line[MAX_LINE_LEN];
+    char buffer[MAX_BUFFER_LEN];
     size_t buffer_len = 0;
     buffer[0] = '\0';
     int paren_depth = 0;
