@@ -122,7 +122,7 @@ jobs:
         path: artifacts
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           artifacts/ado-linux-amd64/*
@@ -131,8 +131,8 @@ jobs:
           artifacts/ado-macos-arm64/*
         generate_release_notes: true
 
-  update-manifests:
-    name: Update Package Manifests
+  deploy-package-managers:
+    name: Deploy to Package Managers (Homebrew, NixOS)
     needs: create-release
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
@@ -145,11 +145,11 @@ jobs:
         ref: main
         fetch-depth: 0
 
-    - name: Update Manifests
+    - name: Deploy to Homebrew (Update Formula)
       run: |
+        set -euo pipefail
         TAG_NAME=${GITHUB_REF#refs/tags/}
         URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG_NAME}.tar.gz"
-        VERSION=${GITHUB_REF#refs/tags/v}
 
         # Download the source tarball to calculate sha256
         curl -sL $URL -o source.tar.gz
@@ -160,14 +160,20 @@ jobs:
         sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" HomebrewFormula/ado.rb
         sed -i "s|homepage \".*\"|homepage \"https://github.com/${{ github.repository }}\"|" HomebrewFormula/ado.rb
 
-        # Update flake.nix version
+    - name: Deploy to NixOS (Update flake.nix)
+      run: |
+        set -euo pipefail
+        VERSION=${GITHUB_REF#refs/tags/v}
         if [ -n "$VERSION" ] && [ "$VERSION" != "${GITHUB_REF}" ]; then
           sed -i "s|version = \".*\";|version = \"$VERSION\";|" flake.nix
         fi
 
-        # Commit and push
+    - name: Commit and Push Deployment Updates
+      run: |
+        set -euo pipefail
+        TAG_NAME=${GITHUB_REF#refs/tags/}
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git add HomebrewFormula/ado.rb flake.nix
-        git commit -m "Update manifests for ${TAG_NAME}" || echo "No changes to commit"
+        git commit -m "Deploy: Update Homebrew and NixOS for ${TAG_NAME}" || echo "No changes to commit"
         git push origin main
