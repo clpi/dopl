@@ -9,8 +9,24 @@ on:
     branches: [ "main" ]
 
 jobs:
+  lint:
+    name: Lint workflows and scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+      - name: shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck *.sh
+
   build-and-test:
     name: Build, Test, and Package
+    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
