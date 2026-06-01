@@ -114,3 +114,29 @@ fn main() {
   return 0
 }
 ```
+
+## Arrays (`examples/arrays.do`)
+
+Arrays can be mutated and expanded easily in Ado using `push` and indexed assignments.
+
+```ado
+# Array usage demonstration
+
+fn main() {
+  let arr = [1, 2]
+  print("Initial length:", len(arr))
+
+  push(arr, 3)
+  push(arr, 4)
+
+  print("Length after push:", len(arr))
+
+  let i = 0
+  while i < len(arr) {
+    print("arr[", i, "] =", arr[i])
+    i = i + 1
+  }
+
+  return 0
+}
+```

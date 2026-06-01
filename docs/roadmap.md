@@ -24,3 +24,6 @@ Ado is evolving. Here is a high-level roadmap of planned features and enhancemen
 - **Debugging Support:** Integrate with GDB/LLDB or introduce a native debugger protocol for IDEs.
 - **VS Code Extension:** Publish an official VS Code extension utilizing the existing Ado LSP.
 - **WebAssembly Target:** Allow the compiler to output WebAssembly (Wasm) instead of C, enabling Ado to run in the browser.
+
+## Phase 5: Additional optimizations
+- **Tail-call optimization:** Optimize recursive calls into jumps to prevent stack overflow on deep recursions.

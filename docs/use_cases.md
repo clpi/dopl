@@ -28,3 +28,6 @@ Ado’s minimal runtime footprint and compilation to standalone binaries make it
 ## 4. IDE and Language Tooling Prototyping
 
 Ado ships with robust tools like a built-in Language Server Protocol (LSP) and Tree-sitter grammar. It is a fantastic testing ground or scaffold for developers who want to learn how to build robust, modern developer tooling for a new language. You can easily dissect its parser and lexer to understand how modern code editors work.
+
+## 5. WebAssembly Port
+With future WebAssembly support, Ado could be used to write highly optimized logic that executes directly in a web browser without the overhead of heavy garbage collectors.
