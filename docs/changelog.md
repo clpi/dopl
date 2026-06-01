@@ -21,3 +21,9 @@ All notable changes to the Ado language will be documented in this file.
   - Standard arithmetic (`+`, `-`, `*`, `/`, `%`) and comparison (`==`, `<`, `>`, `<=`, `>=`, `!=`) operators.
   - Conditional `if` / `else` blocks, `while` loops, and `for` loops.
   - Internal `print` function for I/O operations.
+
+## [0.2.0] - Planned
+
+### Added
+- Standard library implementation.
+- Basic module system for importing code.

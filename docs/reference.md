@@ -83,6 +83,7 @@ The `while` loop repeatedly executes a block as long as a condition evaluates to
 while condition {
   # loop body
 }
+```
 
 ### For Loop
 The `for` loop iterates over a range of integers. Note that the upper bound is exclusive.
@@ -92,6 +93,7 @@ for i in 1..10 {
   # iterates from 1 to 9
   print(i)
 }
+```
 
 ## Functions
 
@@ -142,3 +144,16 @@ print(arr[1]) # Prints 10
 2. **Parsing**: Tokens are organized into an Abstract Syntax Tree (AST).
 3. **Code Generation**: The AST is transpiled directly to C code.
 4. **C Compilation**: A standard C compiler compiles the result to a native executable with `-O2` optimization for speed.
+
+### Nested Control Flow
+You can nest `if` statements and loops as needed.
+
+```ado
+for i in 1..5 {
+  if i % 2 == 0 {
+    print(i, "is even")
+  } else {
+    print(i, "is odd")
+  }
+}
+```

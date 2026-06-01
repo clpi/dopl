@@ -138,3 +138,23 @@ Use `quit` to exit the REPL.
 ## Next Steps
 
 Now that you know the basics of Ado, check out the `docs/examples.md` for more advanced features like recursion, or refer to `docs/reference.md` for the complete language syntax!
+
+## Array Operations
+
+Ado supports dynamic-like operations on arrays using built-in functions such as `len()` and `push()`.
+
+```ado
+fn main() {
+  let my_array = [10, 20]
+
+  # Push a new element
+  push(my_array, 30)
+
+  # Get the length
+  let length = len(my_array)
+  print("Array length is:", length) # Prints 3
+  print("Last element is:", my_array[2]) # Prints 30
+
+  return 0
+}
+```
