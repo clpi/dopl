@@ -263,7 +263,14 @@ class AdoLSP:
         if not word or word not in self.symbols:
             return None
 
-        sym = self.symbols[word][0]
+        sym = None
+        for s in self.symbols[word]:
+            if s.uri == uri and s.line <= line:
+                sym = s
+                break
+        if not sym:
+            same_file_syms = [s for s in self.symbols[word] if s.uri == uri]
+            sym = same_file_syms[0] if same_file_syms else self.symbols[word][0]
 
         if sym.kind == 'function':
             hover_text = f"```ado\nfn {sym.name}({', '.join(sym.params)})\n```"
