@@ -141,10 +141,393 @@ class AdoLSP:
 
 
 
+    def recv(self) -> Optional[dict]:
+        try:
+            line = sys.stdin.readline()
+            if not line:
+                return None
+
+            if not line.startswith("Content-Length: "):
+                # Skip invalid headers
+                while line and line.strip():
+                    line = sys.stdin.readline()
+                return None
+
+            length = int(line[16:].strip())
+            if length < 0 or length > 10_000_000:  # 10MB limit
+                return None
+
+            # Read until empty line (end of headers)
+            while line and line.strip():
+                line = sys.stdin.readline()
+
+            content = sys.stdin.read(length)
+            if not content:
+                return None
+
+            return json.loads(content)
+        except Exception:
+            return None
+
+    def send(self, msg: dict):
+        try:
+            content = json.dumps(msg)
+            content_bytes = content.encode('utf-8')
+            sys.stdout.write(f"Content-Length: {len(content_bytes)}\r\n\r\n{content}")
+            sys.stdout.flush()
+            sys.stdout.flush()
+        except Exception:
+            pass
+
     def publish_diagnostics(self, uri: str):
         text = self.docs.get(uri, '')
         diagnostics = self.get_diagnostics(uri, text)
         self.send({'method': 'textDocument/publishDiagnostics', 'params': {'uri': uri, 'diagnostics': diagnostics}})
+
+    def get_symbol_at_pos(self, uri: str, line: int, col: int) -> Optional[str]:
+        text = self.docs.get(uri)
+        if not text:
+            return None
+        lines = text.split('\n')
+        if line >= len(lines):
+            return None
+
+        ltext = lines[line]
+        if col >= len(ltext):
+            return None
+
+        # Find word boundaries around col
+        start = col
+        while start > 0 and (ltext[start-1].isalnum() or ltext[start-1] == '_'):
+            start -= 1
+
+        end = col
+        while end < len(ltext) and (ltext[end].isalnum() or ltext[end] == '_'):
+            end += 1
+
+        word = ltext[start:end]
+        return word if word else None
+
+    def handle_definition(self, msg: dict) -> list:
+        uri = msg['params']['textDocument']['uri']
+        line = msg['params']['position']['line']
+        col = msg['params']['position']['character']
+
+        word = self.get_symbol_at_pos(uri, line, col)
+        if not word or word not in self.symbols:
+            return []
+
+        sym = self.symbols[word][0] # Just grab the first one for now
+        return [{
+            'uri': sym.uri,
+            'range': {
+                'start': {'line': sym.line, 'character': sym.col},
+                'end': {'line': sym.end_line, 'character': sym.end_col}
+            }
+        }]
+
+    def find_references(self, word: str, restrict_uri: Optional[str] = None) -> List[dict]:
+        refs = []
+        pattern = re.compile(r'\b' + re.escape(word) + r'\b')
+        docs_to_search = {restrict_uri: self.docs[restrict_uri]} if restrict_uri and restrict_uri in self.docs else self.docs
+        for doc_uri, text in docs_to_search.items():
+            lines = text.split('\n')
+            for i, line in enumerate(lines):
+                for match in pattern.finditer(line):
+                    refs.append({
+                        'uri': doc_uri,
+                        'range': {
+                            'start': {'line': i, 'character': match.start()},
+                            'end': {'line': i, 'character': match.end()}
+                        }
+                    })
+        return refs
+
+    def handle_references(self, msg: dict) -> list:
+        uri = msg['params']['textDocument']['uri']
+        line = msg['params']['position']['line']
+        col = msg['params']['position']['character']
+
+        word = self.get_symbol_at_pos(uri, line, col)
+        if not word:
+            return []
+
+        syms = self.symbols.get(word, [])
+        is_local = any(s.kind in ('variable', 'parameter') for s in syms)
+        return self.find_references(word, restrict_uri=uri if is_local else None)
+
+    def handle_hover(self, msg: dict) -> Optional[dict]:
+        uri = msg['params']['textDocument']['uri']
+        line = msg['params']['position']['line']
+        col = msg['params']['position']['character']
+
+        word = self.get_symbol_at_pos(uri, line, col)
+        if not word or word not in self.symbols:
+            return None
+
+        sym = None
+        for s in self.symbols[word]:
+            if s.uri == uri and s.line <= line:
+                sym = s
+                break
+        if not sym:
+            same_file_syms = [s for s in self.symbols[word] if s.uri == uri]
+            sym = same_file_syms[0] if same_file_syms else self.symbols[word][0]
+
+        if sym.kind == 'function':
+            hover_text = f"```ado\nfn {sym.name}({', '.join(sym.params)})\n```"
+            if sym.docstring:
+                hover_text += f"\n\n{sym.docstring}"
+        elif sym.kind == 'variable':
+            hover_text = f"```ado\nlet {sym.name}\n```"
+        else:
+            hover_text = f"```ado\n{sym.name}\n```"
+
+        return {
+            'contents': {
+                'kind': 'markdown',
+                'value': hover_text
+            }
+        }
+
+    def handle_signature_help(self, msg: dict) -> Optional[dict]:
+        uri = msg['params']['textDocument']['uri']
+        line = msg['params']['position']['line']
+        col = msg['params']['position']['character']
+
+        text = self.docs.get(uri)
+        if not text: return None
+
+        lines = text.split('\n')
+        if line >= len(lines): return None
+        ltext = lines[line][:col]
+
+        # Simple heuristic: find the last function call before cursor
+        # Not perfect but works for simple cases
+        call_match = list(re.finditer(r'(\w+)\s*\(', ltext))
+        if not call_match: return None
+
+        func_name = call_match[-1].group(1)
+        if func_name not in self.symbols: return None
+
+        sym = self.symbols[func_name][0]
+        if sym.kind != 'function': return None
+
+        # Count commas to figure out active parameter
+        args_text = ltext[call_match[-1].end():]
+        active_param = args_text.count(',')
+
+        parameters = [{'label': p} for p in sym.params]
+
+        return {
+            'signatures': [{
+                'label': f"{sym.name}({', '.join(sym.params)})",
+                'documentation': sym.docstring,
+                'parameters': parameters
+            }],
+            'activeSignature': 0,
+            'activeParameter': min(active_param, max(0, len(sym.params) - 1))
+        }
+
+    def handle_formatting(self, msg: dict) -> list:
+        uri = msg['params']['textDocument']['uri']
+        text = self.docs.get(uri)
+        if not text: return []
+
+        lines = text.split('\n')
+        formatted_lines = []
+        indent_level = 0
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                formatted_lines.append("")
+                continue
+
+            # Strip comments for brace checking
+            brace_check_line = stripped.split('#')[0].strip()
+
+            # Decrease indent for closing brace
+            if brace_check_line.startswith('}'):
+                indent_level = max(0, indent_level - 1)
+
+            formatted_lines.append("  " * indent_level + stripped)
+
+            # Increase indent for opening brace
+            if brace_check_line.endswith('{'):
+                indent_level += 1
+
+        new_text = '\n'.join(formatted_lines)
+        if new_text == text: return []
+
+        return [{
+            'range': {
+                'start': {'line': 0, 'character': 0},
+                'end': {'line': len(lines), 'character': 0}
+            },
+            'newText': new_text
+        }]
+
+    def handle_prepare_rename(self, msg: dict) -> Optional[dict]:
+        uri = msg['params']['textDocument']['uri']
+        line = msg['params']['position']['line']
+        col = msg['params']['position']['character']
+
+        word = self.get_symbol_at_pos(uri, line, col)
+        if not word or word in self.keywords or word in self.builtins: return None
+
+        # Simple word boundaries to find the range
+        text = self.docs.get(uri, "")
+        lines = text.split('\n')
+        if line >= len(lines): return None
+
+        ltext = lines[line]
+        start = col
+        while start > 0 and (ltext[start-1].isalnum() or ltext[start-1] == '_'): start -= 1
+        end = col
+        while end < len(ltext) and (ltext[end].isalnum() or ltext[end] == '_'): end += 1
+
+        return {
+            'range': {
+                'start': {'line': line, 'character': start},
+                'end': {'line': line, 'character': end}
+            },
+            'placeholder': word
+        }
+
+    def handle_rename(self, msg: dict) -> Optional[dict]:
+        uri = msg['params']['textDocument']['uri']
+        line = msg['params']['position']['line']
+        col = msg['params']['position']['character']
+        new_name = msg['params']['newName']
+
+        word = self.get_symbol_at_pos(uri, line, col)
+        if not word: return None
+
+        refs = self.find_references(word)
+        if not refs: return None
+
+        changes = {}
+        for ref in refs:
+            r_uri = ref['uri']
+            if r_uri not in changes:
+                changes[r_uri] = []
+            changes[r_uri].append({
+                'range': ref['range'],
+                'newText': new_name
+            })
+
+        return {'changes': changes}
+
+    def handle_document_symbols(self, msg: dict) -> list:
+        uri = msg['params']['textDocument']['uri']
+        symbols = []
+        for name, sym_list in self.symbols.items():
+            for sym in sym_list:
+                if sym.uri == uri:
+                    symbols.append({
+                        'name': name,
+                        'kind': 12 if sym.kind == 'function' else 13, # Function or Variable
+                        'location': {
+                            'uri': uri,
+                            'range': {
+                                'start': {'line': sym.line, 'character': sym.col},
+                                'end': {'line': sym.end_line, 'character': sym.end_col}
+                            }
+                        }
+                    })
+        return symbols
+
+    def handle_workspace_symbols(self, msg: dict) -> list:
+        query = msg['params'].get('query', '').lower()
+        symbols = []
+        for name, sym_list in self.symbols.items():
+            if query and query not in name.lower():
+                continue
+            for sym in sym_list:
+                symbols.append({
+                    'name': name,
+                    'kind': 12 if sym.kind == 'function' else 13, # Function or Variable
+                    'location': {
+                        'uri': sym.uri,
+                        'range': {
+                            'start': {'line': sym.line, 'character': sym.col},
+                            'end': {'line': sym.end_line, 'character': sym.end_col}
+                        }
+                    }
+                })
+        return symbols
+
+    def handle_code_action(self, msg: dict) -> list:
+        # Minimal empty implementation for now
+        return []
+
+    def handle_code_lens(self, msg: dict) -> list:
+        # Minimal empty implementation for now
+        return []
+
+    def handle_completion(self, msg: dict) -> dict:
+        uri = msg['params']['textDocument']['uri']
+        items = []
+
+        # Add keywords
+        for kw in self.keywords:
+            items.append({
+                'label': kw,
+                'kind': 14, # Keyword
+                'detail': 'keyword'
+            })
+
+        # Add symbols
+        for name, sym_list in self.symbols.items():
+            sym = sym_list[0]
+            if sym.kind == 'function':
+                # Snippet completion for functions
+                snippet = name + '(' + ', '.join([f'${{{i+1}:{p}}}' for i, p in enumerate(sym.params)]) + ')'
+                items.append({
+                    'label': name,
+                    'kind': 3, # Function
+                    'detail': f'fn {name}({", ".join(sym.params)})',
+                    'insertText': snippet,
+                    'insertTextFormat': 2, # Snippet
+                    'documentation': sym.docstring
+                })
+            else:
+                items.append({
+                    'label': name,
+                    'kind': 6 if sym.kind == 'variable' else 5, # Variable or Field
+                    'detail': sym.kind
+                })
+
+        return {'isIncomplete': False, 'items': items}
+
+    def handle_initialize(self, msg: dict) -> dict:
+        return {
+            'capabilities': {
+                'textDocumentSync': 1,  # Full sync
+                'completionProvider': {
+                    'resolveProvider': False,
+                    'triggerCharacters': ['.']
+                },
+                'definitionProvider': True,
+                'referencesProvider': True,
+                'hoverProvider': True,
+                'documentSymbolProvider': True,
+                'workspaceSymbolProvider': True,
+                'documentFormattingProvider': True,
+                'documentRangeFormattingProvider': True,
+                'renameProvider': {
+                    'prepareProvider': True
+                },
+                'signatureHelpProvider': {
+                    'triggerCharacters': ['(', ',']
+                },
+                'codeActionProvider': True,
+                'codeLensProvider': {
+                    'resolveProvider': False
+                }
+            }
+        }
 
     def run(self):
         while True:
