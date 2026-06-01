@@ -154,6 +154,8 @@ class AdoLSP:
                 return None
 
             length = int(line[16:].strip())
+            if length < 0 or length > 10_000_000:  # 10MB limit
+                return None
 
             # Read until empty line (end of headers)
             while line and line.strip():
