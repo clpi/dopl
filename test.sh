@@ -11,8 +11,7 @@ for file in example.do examples/*.do; do
 done
 
 echo "Running C unit tests..."
-cc -o test_main test_main.c lexer.c parser.c codegen.c
-if [ $? -eq 0 ]; then
+if cc -o test_main test_main.c lexer.c parser.c codegen.c; then
     ./test_main
     res=$?
     if [ $res -ne 0 ]; then

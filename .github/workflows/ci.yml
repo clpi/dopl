@@ -16,13 +16,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: actionlint
         run: |
-          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) || true
           ./actionlint -color
       - name: shellcheck
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          shellcheck *.sh
+          shellcheck ./*.sh
 
   build-and-test:
     name: Build, Test, and Package
@@ -97,15 +97,15 @@ jobs:
           RPM_ARCH="aarch64"
         fi
 
-        fpm -s dir -t deb -n ado -v $VERSION -a $ARCH -C ./tmp_install .
-        fpm -s dir -t rpm -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
-        fpm -s dir -t apk -n ado -v $VERSION -a $ARCH -C ./tmp_install .
-        fpm -s dir -t pacman -n ado -v $VERSION -a $RPM_ARCH -C ./tmp_install .
-        ls -la *.deb *.rpm *.apk *.pkg.tar.zst
-        mv *.deb dist/
-        mv *.rpm dist/
-        mv *.apk dist/
-        mv *.pkg.tar.zst dist/
+        fpm -s dir -t deb -n ado -v "$VERSION" -a "$ARCH" -C ./tmp_install .
+        fpm -s dir -t rpm -n ado -v "$VERSION" -a "$RPM_ARCH" -C ./tmp_install .
+        fpm -s dir -t apk -n ado -v "$VERSION" -a "$ARCH" -C ./tmp_install .
+        fpm -s dir -t pacman -n ado -v "$VERSION" -a "$RPM_ARCH" -C ./tmp_install .
+        ls -la ./*.deb ./*.rpm ./*.apk ./*.pkg.tar.zst
+        mv ./*.deb dist/
+        mv ./*.rpm dist/
+        mv ./*.apk dist/
+        mv ./*.pkg.tar.zst dist/
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -168,7 +168,7 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/v}
 
         # Download the source tarball to calculate sha256
-        curl -sL $URL -o source.tar.gz
+        curl -sL "$URL" -o source.tar.gz
         SHA256=$(sha256sum source.tar.gz | awk '{ print $1 }')
 
         # Update the Homebrew formula
