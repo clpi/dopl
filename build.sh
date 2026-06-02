@@ -2,9 +2,7 @@
 
 # Build the Ado compiler with optimizations
 echo "Building Ado compiler..."
-cc -O2 -o doc main.c lexer.c parser.c codegen.c
-
-if [ $? -ne 0 ]; then
+if ! cc -O2 -o doc main.c lexer.c parser.c codegen.c; then
     echo "Build failed!"
     exit 1
 fi
