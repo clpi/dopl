@@ -17,6 +17,7 @@ Ado (file extension `.do`) is a minimal, fast programming language that compiles
 - **Types:** The language supports integer types, integer arrays, and booleans (`true`, `false`).
 - **Arrays:** Arrays are zero-indexed and accessed via standard bracket notation (e.g. `arr[0]`). Supported array operations include `push(arr, val)` and `len(arr)`.
 - **Strings:** Limited string literal support exists, primarily for use as arguments to the built-in `print()` function.
+- **Control Flow:** `if` / `else` conditionals, `while` loops, and `for` loops (using range syntax like `for i in start..end { ... }`).
 
 ## Build and Testing
 
