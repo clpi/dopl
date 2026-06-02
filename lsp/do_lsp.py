@@ -20,6 +20,10 @@ class Symbol:
     end_col: int
     params: List[str] = field(default_factory=list)
     docstring: str = ""
+    scope_start_line: int = 0
+    scope_start_col: int = 0
+    scope_end_line: int = 999999
+    scope_end_col: int = 999999
 
 @dataclass
 class Reference:
@@ -69,6 +73,9 @@ class AdoLSP:
 
         brace_count = 0
         active_functions = []
+        active_scopes = []
+        active_variables = []
+        active_parameters = []
 
         for i, (line, masked_line) in enumerate(zip(lines, masked_lines)):
             match = fn_pattern.search(masked_line)
@@ -95,36 +102,79 @@ class AdoLSP:
                     'base_count': brace_count
                 })
 
+                # Parameters scope is the function body
                 for param in params:
                     param_pattern = re.compile(r'\b' + re.escape(param) + r'\b')
                     param_match = param_pattern.search(masked_line)
                     if param_match:
-                        symbols.append(Symbol(name=param, kind='parameter', uri=uri,
-                            line=i, col=param_match.start(), end_line=i, end_col=param_match.end()))
+                        p_sym = Symbol(name=param, kind='parameter', uri=uri,
+                            line=i, col=param_match.start(), end_line=i, end_col=param_match.end(),
+                            scope_start_line=i, scope_start_col=param_match.end())
+                        symbols.append(p_sym)
+                        active_parameters.append({
+                            'symbol': p_sym,
+                            'func_base_count': brace_count,
+                            'started': False
+                        })
 
-            if '{' in masked_line:
-                for func_data in active_functions:
-                    if not func_data['started']:
-                        func_data['started'] = True
-                        func_data['base_count'] = brace_count
+            for idx, char in enumerate(masked_line):
+                if char == '{':
+                    for func_data in active_functions:
+                        if not func_data['started']:
+                            func_data['started'] = True
+                            func_data['base_count'] = brace_count
+                    for p_data in active_parameters:
+                        if not p_data['started'] and p_data['func_base_count'] == brace_count:
+                            p_data['started'] = True
+                            p_data['func_base_count'] = brace_count
 
-            brace_count += masked_line.count('{') - masked_line.count('}')
+                    brace_count += 1
+                    active_scopes.append({'brace_count': brace_count, 'line': i, 'col': idx})
+                elif char == '}':
+                    if active_functions:
+                        remaining_functions = []
+                        for func_data in active_functions:
+                            if func_data['started'] and brace_count == func_data['base_count'] + 1:
+                                func_data['symbol'].end_line = i
+                                func_data['symbol'].end_col = idx + 1
+                            else:
+                                remaining_functions.append(func_data)
+                        active_functions = remaining_functions
 
-            if active_functions:
-                remaining_functions = []
-                for func_data in active_functions:
-                    if func_data['started'] and brace_count == func_data['base_count']:
-                        func_data['symbol'].end_line = i
-                        func_data['symbol'].end_col = len(line)
-                    else:
-                        remaining_functions.append(func_data)
-                active_functions = remaining_functions
+                    if active_parameters:
+                        remaining_parameters = []
+                        for p_data in active_parameters:
+                            if p_data['started'] and brace_count == p_data['func_base_count'] + 1:
+                                p_data['symbol'].scope_end_line = i
+                                p_data['symbol'].scope_end_col = idx
+                            else:
+                                remaining_parameters.append(p_data)
+                        active_parameters = remaining_parameters
 
-        for i, masked_line in enumerate(masked_lines):
-            match = let_pattern.search(masked_line)
-            if match:
-                symbols.append(Symbol(name=match.group(1), kind='variable', uri=uri,
-                    line=i, col=match.start(1), end_line=i, end_col=match.end(1)))
+                    if active_variables:
+                        remaining_variables = []
+                        for v_data in active_variables:
+                            if v_data['brace_count'] == brace_count:
+                                v_data['symbol'].scope_end_line = i
+                                v_data['symbol'].scope_end_col = idx
+                            else:
+                                remaining_variables.append(v_data)
+                        active_variables = remaining_variables
+
+                    if active_scopes:
+                        active_scopes.pop()
+                    brace_count -= 1
+
+            # Variables
+            for match in let_pattern.finditer(masked_line):
+                v_sym = Symbol(name=match.group(1), kind='variable', uri=uri,
+                    line=i, col=match.start(1), end_line=i, end_col=match.end(1),
+                    scope_start_line=i, scope_start_col=match.end(1))
+                symbols.append(v_sym)
+                active_variables.append({
+                    'symbol': v_sym,
+                    'brace_count': brace_count
+                })
 
         for sym in symbols:
             if sym.name not in self.symbols: self.symbols[sym.name] = []
@@ -140,6 +190,7 @@ class AdoLSP:
 
         let_pattern = re.compile(r'\blet\s+(\w+)\s*(?:[^=]*)$')
         call_pattern = re.compile(r'\b(\w+)\s*\(')
+        word_pattern = re.compile(r'\b[a-zA-Z_]\w*\b')
 
         for i, line in enumerate(lines):
             for j, char in enumerate(line):
@@ -180,6 +231,49 @@ class AdoLSP:
                         },
                         'severity': 2, # Warning
                         'message': f'Undefined function: {func_name}',
+                        'source': 'ado-lsp'
+                    })
+
+            # Check for undefined variables
+            # We don't want to flag function names, keywords, or the variable part of `let x`
+            masked_line = masked_text.split('\n')[i]
+            for match in word_pattern.finditer(masked_line):
+                word = match.group(0)
+                if word in self.keywords or word in self.builtins:
+                    continue
+
+                # If it's part of a function definition `fn x` or `let x`, ignore
+                prev_word_match = re.search(r'\b(fn|let)\s+$', line[:match.start()])
+                if prev_word_match:
+                    continue
+
+                # Ignore function parameters during their definition
+                # We can check if it's within a function parameter list
+                is_param_def = False
+                for sym_list in self.symbols.values():
+                    for s in sym_list:
+                        if s.kind == 'parameter' and s.line == i and s.col == match.start():
+                            is_param_def = True
+                            break
+                    if is_param_def:
+                        break
+                if is_param_def:
+                    continue
+
+                # If it's a function call, handled above
+                if match.end() < len(line) and line[match.end():].lstrip().startswith('('):
+                    continue
+
+                # Check if it resolves
+                sym = self.resolve_symbol(uri, word, i, match.start())
+                if not sym:
+                    diagnostics.append({
+                        'range': {
+                            'start': {'line': i, 'character': match.start()},
+                            'end': {'line': i, 'character': match.end()}
+                        },
+                        'severity': 2, # Warning
+                        'message': f'Undefined variable: {word}',
                         'source': 'ado-lsp'
                     })
 
@@ -242,6 +336,47 @@ class AdoLSP:
         diagnostics = self.get_diagnostics(uri, text)
         self.send({'method': 'textDocument/publishDiagnostics', 'params': {'uri': uri, 'diagnostics': diagnostics}})
 
+
+    def resolve_symbol(self, uri: str, name: str, line: int, col: int) -> Optional[Symbol]:
+        if name not in self.symbols:
+            return None
+
+        best_sym = None
+        for sym in self.symbols[name]:
+            if sym.uri != uri and sym.kind != 'function':
+                continue
+
+            if sym.kind == 'function':
+                if not best_sym:
+                    best_sym = sym
+                continue
+
+            # Check if in scope
+            in_scope = False
+            # Allow resolving the symbol if we're hovering/querying exactly on its definition
+            if sym.line == line and sym.col <= col <= sym.end_col:
+                in_scope = True
+            elif sym.scope_start_line < line < sym.scope_end_line:
+                in_scope = True
+            elif sym.scope_start_line == line and sym.scope_end_line == line:
+                if sym.scope_start_col <= col <= sym.scope_end_col:
+                    in_scope = True
+            elif sym.scope_start_line == line:
+                if col >= sym.scope_start_col:
+                    in_scope = True
+            elif sym.scope_end_line == line:
+                if col <= sym.scope_end_col:
+                    in_scope = True
+
+            if in_scope:
+                if best_sym is None or best_sym.kind == 'function':
+                    best_sym = sym
+                else:
+                    if sym.scope_start_line > best_sym.scope_start_line or (sym.scope_start_line == best_sym.scope_start_line and sym.scope_start_col > best_sym.scope_start_col):
+                        best_sym = sym
+
+        return best_sym
+
     def get_symbol_at_pos(self, uri: str, line: int, col: int) -> Optional[str]:
         text = self.docs.get(uri)
         if not text:
@@ -272,10 +407,13 @@ class AdoLSP:
         col = msg['params']['position']['character']
 
         word = self.get_symbol_at_pos(uri, line, col)
-        if not word or word not in self.symbols:
+        if not word:
             return []
 
-        sym = self.symbols[word][0] # Just grab the first one for now
+        sym = self.resolve_symbol(uri, word, line, col)
+        if not sym:
+            return []
+
         return [{
             'uri': sym.uri,
             'range': {
@@ -284,15 +422,27 @@ class AdoLSP:
             }
         }]
 
-    def find_references(self, word: str, restrict_uri: Optional[str] = None) -> List[dict]:
+    def find_references(self, word: str, restrict_uri: Optional[str] = None, restrict_sym: Optional[Symbol] = None) -> List[dict]:
         refs = []
         pattern = re.compile(r'\b' + re.escape(word) + r'\b')
         docs_to_search = {restrict_uri: self.docs[restrict_uri]} if restrict_uri and restrict_uri in self.docs else self.docs
+
         for doc_uri, text in docs_to_search.items():
             masked_text = self._mask_text(text)
             lines = masked_text.split('\n')
             for i, line in enumerate(lines):
+                if restrict_sym and restrict_sym.kind != 'function' and restrict_uri == doc_uri:
+                    if i < restrict_sym.scope_start_line or i > restrict_sym.scope_end_line:
+                        continue
+
                 for match in pattern.finditer(line):
+                    if restrict_sym and restrict_sym.kind != 'function' and restrict_uri == doc_uri:
+                        if i == restrict_sym.scope_start_line and match.start() < restrict_sym.scope_start_col:
+                            if not (i == restrict_sym.line and match.start() == restrict_sym.col):
+                                continue
+                        if i == restrict_sym.scope_end_line and match.end() > restrict_sym.scope_end_col:
+                            continue
+
                     refs.append({
                         'uri': doc_uri,
                         'range': {
@@ -728,7 +878,10 @@ class AdoLSP:
         word = self.get_symbol_at_pos(uri, line, col)
         if not word: return []
 
-        refs = self.find_references(word, restrict_uri=uri)
+        sym = self.resolve_symbol(uri, word, line, col)
+        if not sym: return []
+
+        refs = self.find_references(word, restrict_uri=uri, restrict_sym=sym)
         highlights = []
         for ref in refs:
             highlights.append({
