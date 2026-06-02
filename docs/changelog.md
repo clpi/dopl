@@ -6,6 +6,7 @@ All notable changes to the Ado language will be documented in this file.
 
 ### Added
 - Comprehensive markdown documentation inside the `docs/` folder, including `tutorial.md`, `examples.md`, `reference.md`, `use_cases.md`, and `roadmap.md`.
+- Expanded documentation: Details on arrays, strings, future roadmap considerations, and `AGENTS.md` context updates.
 
 ## [0.1.0] - Initial Release
 

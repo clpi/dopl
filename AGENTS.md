@@ -37,5 +37,9 @@ Ado (file extension `.do`) is a minimal, fast programming language that compiles
 
 Comprehensive markdown documentation for the language (including tutorials, reference, examples, use cases, roadmap, and changelog) is located in the `docs/` directory.
 
+Additionally, the project root contains two very helpful setup and reference documents:
+- **`SETUP.md`**: Complete and comprehensive setup guide, detailing the IDE setup and features, running commands, and general configuration.
+- **`QUICKREF.md`**: Contains a quick reference for the Ado language syntax, examples, patterns, and editor commands.
+
 ---
 **Note:** Always verify your work by running the relevant tests (`make test`, `python3 lsp/test_lsp.py`, etc.) and ensure compatibility with the existing CI/CD workflow and documentation structure.

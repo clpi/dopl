@@ -11,7 +11,7 @@ Ado is evolving. Here is a high-level roadmap of planned features and enhancemen
 
 - **Standard Library:** Build a small standard library containing mathematical helpers, string manipulation, and I/O wrappers.
 - **Module System:** Allow importing code from other `.do` files using an `import` statement.
-- **Package Manager:** A minimal tool to download and share Ado modules.
+- **Package Manager:** A minimal tool to download and share Ado modules, possibly utilizing Git submodules or a centralized registry to quickly scaffold new projects.
 
 ## Phase 3: Advanced Types and Structures
 

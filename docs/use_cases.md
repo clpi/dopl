@@ -31,3 +31,11 @@ Ado ships with robust tools like a built-in Language Server Protocol (LSP) and T
 
 ## 5. WebAssembly Port
 With future WebAssembly support, Ado could be used to write highly optimized logic that executes directly in a web browser without the overhead of heavy garbage collectors.
+
+## 6. Sample Applications
+
+The Ado distribution includes several sample applications that demonstrate its capabilities and syntax. These can be found in the `examples/` directory:
+
+- **`examples/collatz.do`**: Demonstrates the Collatz conjecture sequence calculator. This shows how recursion and branching (`if`/`else`) work efficiently.
+- **`examples/math.do`**: Showcases various mathematical functions (like power, sum, and factorial) implemented cleanly using Ado's integer arithmetic and recursive functions.
+- **`examples/conditionals.do`**: Provides examples of multiple conditional expression implementations like `max`, `min`, `abs`, `sign`, and `clamp`.

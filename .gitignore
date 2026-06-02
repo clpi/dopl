@@ -10,3 +10,4 @@ out.c
 *.pkg.tar.zst
 tmp_install/
 dist/
+__pycache__/

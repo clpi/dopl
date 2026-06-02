@@ -40,6 +40,17 @@ Hello, World from Ado!
 Currently, Ado primarily supports integer types and arrays. Variables are declared using the `let` keyword.
 Ado leverages type inference behind the scenes to give you powerful granular control, which means arrays and complex expressions are as fast as native C implicitly-typed variables!
 
+### Strings
+
+While robust string manipulation is planned for the future, you can currently use simple string literals within the built-in `print` function to output text. They cannot be assigned to variables just yet.
+
+```ado
+fn main() {
+  print("This is a simple string literal.")
+  return 0
+}
+```
+
 ```ado
 fn main() {
   # Define an integer

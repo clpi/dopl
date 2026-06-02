@@ -27,6 +27,7 @@ Currently, Ado focuses exclusively on numeric processing and primarily supports 
 
 - **Integers**: Ado supports positive and negative integer literals (e.g., `42`, `-10`).
 - **Arrays**: Ado supports integer arrays. They are zero-indexed and act mostly like C arrays under the hood. You can define arrays with `[val1, val2]`.
+  - *Memory Management*: Because Ado compiles to C, arrays manage memory implicitly as dynamic C pointers when using built-ins like `push`. Be mindful of very large array allocations in constrained environments.
 - **Strings (Limited)**: Strings like `"hello"` can be used as arguments to the `print` function but cannot currently be assigned to variables or manipulated.
 - **Booleans**: `true` and `false` literals exist primarily within `if` and `while` expression evaluation context.
 
