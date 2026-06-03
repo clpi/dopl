@@ -7,7 +7,12 @@ This file provides context and guidelines for automated agents working on the Ad
 Ado (file extension `.do`) is a minimal, fast programming language that compiles down to highly optimized C code (using `-O2`).
 
 - **Compiler Binary:** Built as `doc` via `make` and installed as `ado` via `make install`.
-- **LSP Implementation:** A Python-based Language Server Protocol implementation is available in `lsp/do_lsp.py`. Test it via `pytest lsp/test_lsp.py` or `python3 lsp/test_lsp.py`.
+- **LSP Implementation:** A Python-based Language Server Protocol implementation is available in `lsp/do_lsp.py`. Test it via `pytest lsp/test_lsp.py`, `python3 lsp/test_lsp.py`, or `python3 -m unittest lsp.test_lsp`.
+  - The LSP implementation routes incoming JSON-RPC requests via explicit `if/elif` statements in the `run()` method.
+  - It supports features including semantic tokens, inlay hints, call hierarchy, document highlight, code actions, completions, diagnostics, goto definition, references, hover, formatting, folding ranges, and rename.
+  - The LSP tracks lexical block scope for variables and parameters using `brace_count` during text parsing (utilizing a `_mask_text` helper to blank out string literals and `#` comments) to power accurate goto definition, hover, and diagnostics.
+  - **Important:** Avoid committing compiled Python bytecode (e.g., `__pycache__` directories or `.pyc` files) to prevent failing code reviews.
+  - **Testing Quirk:** When testing the LSP server, mock `sys.stdout` or the server's `send` method (e.g., `self.server.send = lambda msg: None`) to prevent JSON-RPC output from polluting the test console.
 - **Tree-sitter Grammar:** The `tree-sitter-do/` directory contains the Tree-sitter grammar. It can be compiled by running `tree-sitter generate` inside that directory.
 - **IDE Support:** Use the `./do-edit` helper script to launch Neovim with full IDE capabilities (LSP, Tree-sitter) for `.do` files.
 
@@ -32,6 +37,8 @@ Ado (file extension `.do`) is a minimal, fast programming language that compiles
 - A Homebrew formula is maintained in `HomebrewFormula/ado.rb`.
 - Both the Homebrew formula and the flake version are automatically updated via the consolidated GitHub Actions CI/CD workflow in `.github/workflows/ci.yml`.
 - The CI/CD workflow also packages the compiled executable (renamed to `ado`) into `.tar.gz` archives for distribution.
+- The CI/CD pipeline includes a strict linting job for GitHub Actions workflows (using `actionlint`) and shell scripts (using `shellcheck`). Scripts must pass shellcheck (e.g., direct exit-code checks instead of `$?` and safe globbing like `./*.sh`).
+- The CI/CD workflow intentionally uses the `macos-13` runner for macOS x86_64 (`x86_64-darwin`) targets, as newer GitHub-hosted macOS runners (like `macos-14`) are strictly ARM64. Actionlint is configured via `.github/actionlint.yaml` to allow the `macos-13` label to prevent linting failures.
 
 ## Documentation
 
