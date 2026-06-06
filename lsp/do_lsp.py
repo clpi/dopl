@@ -24,6 +24,7 @@ class Symbol:
     scope_start_col: int = 0
     scope_end_line: int = 999999
     scope_end_col: int = 999999
+    inferred_type: str = ""
 
 @dataclass
 class Reference:
@@ -167,9 +168,22 @@ class AdoLSP:
 
             # Variables
             for match in let_pattern.finditer(masked_line):
+                # Attempt to infer type based on the assignment right hand side
+                rhs = masked_line[match.end():].strip()
+                inferred_type = ""
+                if rhs.startswith('[') and rhs.endswith(']'):
+                    inferred_type = "int[]"
+                elif rhs in ('true', 'false'):
+                    inferred_type = "bool"
+                elif rhs.startswith('"') and rhs.endswith('"'):
+                    inferred_type = "string"
+                elif re.match(r'^-?\d+$', rhs):
+                    inferred_type = "int"
+
                 v_sym = Symbol(name=match.group(1), kind='variable', uri=uri,
                     line=i, col=match.start(1), end_line=i, end_col=match.end(1),
-                    scope_start_line=i, scope_start_col=match.end(1))
+                    scope_start_line=i, scope_start_col=match.end(1),
+                    inferred_type=inferred_type)
                 symbols.append(v_sym)
                 active_variables.append({
                     'symbol': v_sym,
@@ -488,7 +502,10 @@ class AdoLSP:
             if sym.docstring:
                 hover_text += f"\n\n{sym.docstring}"
         elif sym.kind == 'variable':
-            hover_text = f"```ado\nlet {sym.name}\n```"
+            hover_text = f"```ado\nlet {sym.name}"
+            if sym.inferred_type:
+                hover_text += f": {sym.inferred_type}"
+            hover_text += "\n```"
         else:
             hover_text = f"```ado\n{sym.name}\n```"
 
@@ -832,8 +849,30 @@ class AdoLSP:
         return folds
 
     def handle_code_lens(self, msg: dict) -> list:
-        # Minimal empty implementation for now
-        return []
+        uri = msg['params']['textDocument']['uri']
+        lenses = []
+
+        for name, sym_list in self.symbols.items():
+            for sym in sym_list:
+                if sym.uri == uri and sym.kind == 'function':
+                    # Find references to this function
+                    # It's better to restrict_sym here, but restrict_uri=None to find across all files
+                    refs = self.find_references(name)
+                    # Subtract 1 for the definition itself if it's found
+                    ref_count = max(0, len(refs) - 1)
+
+                    lenses.append({
+                        'range': {
+                            'start': {'line': sym.line, 'character': sym.col},
+                            'end': {'line': sym.line, 'character': sym.col + len(sym.name)}
+                        },
+                        'command': {
+                            'title': f"{ref_count} reference{'s' if ref_count != 1 else ''}",
+                            'command': '' # Can be an empty command, just to show the text
+                        }
+                    })
+
+        return lenses
 
     def handle_completion(self, msg: dict) -> dict:
         uri = msg['params']['textDocument']['uri']

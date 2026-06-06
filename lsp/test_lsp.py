@@ -63,6 +63,23 @@ class TestLSP(unittest.TestCase):
         actions = server.handle_code_action(msg)
         self.assertTrue(any(a['title'] == 'Initialize variable' for a in actions))
 
+    def test_code_lens(self):
+        server = do_lsp.AdoLSP()
+        text = "fn foo() {}\nfn main() {\n  foo()\n  foo()\n}"
+        server.docs["file:///test.do"] = text
+        server.parse_symbols("file:///test.do", text)
+        msg = {'params': {'textDocument': {'uri': 'file:///test.do'}}}
+        lenses = server.handle_code_lens(msg)
+        self.assertEqual(len(lenses), 2)
+
+        # main has 0 references
+        main_lens = next(l for l in lenses if l['range']['start']['line'] == 1)
+        self.assertEqual(main_lens['command']['title'], '0 references')
+
+        # foo has 2 references
+        foo_lens = next(l for l in lenses if l['range']['start']['line'] == 0)
+        self.assertEqual(foo_lens['command']['title'], '2 references')
+
     def test_folding_range(self):
         server = do_lsp.AdoLSP()
         text = "fn main() {\n  let a = 1\n}"
@@ -128,6 +145,28 @@ class TestLSP(unittest.TestCase):
         result = server.handle_hover(msg)
         self.assertIsNotNone(result)
         self.assertIn("fn myfunc(a, b)", result['contents']['value'])
+
+    def test_type_inference(self):
+        server = do_lsp.AdoLSP()
+        uri = "file:///test.do"
+        server.docs[uri] = "fn main() {\n  let int_var = 1\n  let bool_var = true\n  let str_var = \"test\"\n  let arr_var = [1, 2]\n}"
+        server.parse_symbols(uri, server.docs[uri])
+
+        msg = {'params': {'textDocument': {'uri': uri}, 'position': {'line': 1, 'character': 7}}}
+        result = server.handle_hover(msg)
+        self.assertIn("let int_var: int", result['contents']['value'])
+
+        msg = {'params': {'textDocument': {'uri': uri}, 'position': {'line': 2, 'character': 7}}}
+        result = server.handle_hover(msg)
+        self.assertIn("let bool_var: bool", result['contents']['value'])
+
+        msg = {'params': {'textDocument': {'uri': uri}, 'position': {'line': 3, 'character': 7}}}
+        result = server.handle_hover(msg)
+        self.assertIn("let str_var: string", result['contents']['value'])
+
+        msg = {'params': {'textDocument': {'uri': uri}, 'position': {'line': 4, 'character': 7}}}
+        result = server.handle_hover(msg)
+        self.assertIn("let arr_var: int[]", result['contents']['value'])
 
     def test_definition(self):
         server = do_lsp.AdoLSP()
