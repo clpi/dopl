@@ -65,6 +65,7 @@ jobs:
         EOF
         sudo sed -i 's/^Types: deb$/Types: deb\nArchitectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
         sudo apt-get update
+        sudo apt-get remove -y libcurl4-openssl-dev
         sudo apt-get install -y gcc-aarch64-linux-gnu libcurl4-openssl-dev:arm64
 
     - name: Build
