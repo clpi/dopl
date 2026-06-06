@@ -39,10 +39,14 @@ typedef struct AST {
 typedef struct {
     Lexer *lex;
     Token cur;
+    struct AST *pool;
+    int pool_count;
+    int pool_cap;
 } Parser;
 
 Parser *parser_new(Lexer *lex);
 AST *parse_program(Parser *p);
 void ast_free(AST *ast);
+void parser_free(Parser *p);
 
 #endif

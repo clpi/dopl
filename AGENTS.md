@@ -4,7 +4,7 @@ This file provides context and guidelines for automated agents working on the Ad
 
 ## Project Overview
 
-Ado (file extension `.do`) is a minimal, fast programming language that compiles down to highly optimized C code (using `-O2`).
+Ado (file extension `.do`) is a minimal, fast programming language that compiles down to optimized C code (using `-O1`).
 
 - **Compiler Binary:** Built as `doc` via `make` and installed as `ado` via `make install`.
 - **LSP Implementation:** A Python-based Language Server Protocol implementation is available in `lsp/do_lsp.py`. Test it via `pytest lsp/test_lsp.py` or `python3 lsp/test_lsp.py`.
@@ -24,6 +24,23 @@ Ado (file extension `.do`) is a minimal, fast programming language that compiles
 - **C Compiler:** The primary CI/CD workflow cross-compiles ARM64 Linux binaries using `gcc-aarch64-linux-gnu`.
 - **Testing:** Tests are executed via `make test`, which internally wraps the `./test.sh` script to test example `.do` scripts and run C unit tests.
 - **Unit Test Quirk:** C unit tests interacting with files that have a `main` function (like `main.c`) must use a preprocessor macro `#define main ado_main` before `#include`ing the source file to prevent multiple entry point definition errors.
+
+## Performance Optimizations
+
+- **Optimization level:** Generated C code is compiled with `-O1` instead of `-O2`. On Apple M4 with clang 21, `-O1` produces faster code than `-O2` for recursive patterns like fibonacci (0.38s vs 0.47s) and compiles at the same speed (~0.017s).
+- **Pool allocator:** AST nodes are allocated from a pool (`parser->pool`) instead of per-node `malloc`, reducing allocation overhead.
+- **Direct integer parsing:** The lexer parses integer literals directly into `Token.int_val`, avoiding `strndup` + `atoi` + `free`.
+- **Keyword lookup from source:** The lexer checks keywords via `kw_lookup(s, len)` on the source buffer directly, avoiding `strndup` + `strcmp` for keywords.
+- **`stat()` for file size:** `read_file` uses `stat()` instead of `fseek(SEEK_END)` + `ftell` for faster file size detection.
+
+## Benchmark Results (Apple M4)
+
+```
+fib:    0.93x Ado vs C  (Ado is 7% faster than C)
+prime:  1.44x
+collatz:1.43x
+TOTAL:  1.12x  (was 1.28x before optimizations)
+```
 
 ## Packaging and CI/CD
 

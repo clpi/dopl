@@ -35,13 +35,22 @@ if has_treesitter then
   end
 end
 
+-- Find LSP: check PATH first, then fall back to repo path
+local function find_lsp()
+  local lsp_in_path = vim.fn.executable("do-lsp")
+  if lsp_in_path == 1 then
+    return "do-lsp"
+  end
+  return project_root .. "/lsp/do-lsp.py"
+end
+
 -- Set up LSP
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'ado',
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "ado",
   callback = function()
     local lsp_opts = {
-      name = 'ado-lsp',
-      cmd = {project_root .. '/lsp/do-lsp.py'},
+      name = "ado-lsp",
+      cmd = { find_lsp() },
       root_dir = project_root,
       capabilities = vim.lsp.protocol.make_client_capabilities(),
       on_attach = function(client, bufnr)

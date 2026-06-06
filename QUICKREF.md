@@ -29,7 +29,7 @@ if x > 0 {
 
 ### Comments
 ```
-// Single line comment
+# Single line comment
 ```
 
 ## Operators

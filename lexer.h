@@ -13,6 +13,7 @@ typedef enum {
 typedef struct {
     TokenType type;
     char *value;
+    int int_val;
     int line;
 } Token;
 

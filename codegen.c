@@ -66,32 +66,38 @@ static void gen_expr(AST *ast, FILE *out) {
             gen_expr(ast->unary.operand, out);
             fprintf(out, ")");
             break;
-        case AST_CALL:
-            fprintf(out, "%s(", ast->call.name);
+        case AST_CALL: {
+            const char *name = ast->call.name;
+            if (strcmp(name, "abs") == 0) name = "ado_abs";
+            else if (strcmp(name, "min") == 0) name = "ado_min";
+            else if (strcmp(name, "max") == 0) name = "ado_max";
+            else if (strcmp(name, "clamp") == 0) name = "ado_clamp";
+            else if (strcmp(name, "pow") == 0) name = "ado_pow";
+            fprintf(out, "%s(", name);
             for (int i = 0; i < ast->call.argc; i++) {
                 gen_expr(ast->call.args[i], out);
                 if (i < ast->call.argc - 1) fprintf(out, ",");
             }
             fprintf(out, ")");
             break;
+        }
         case AST_ARRAY:
-            fprintf(out, "(int[]){");
+            fprintf(out, "ado_make_array((int[]){");
             for (int i = 0; i < ast->array.count; i++) {
                 gen_expr(ast->array.elems[i], out);
                 if (i < ast->array.count - 1) fprintf(out, ",");
             }
-            fprintf(out, "}");
+            fprintf(out, "},%d)", ast->array.count);
             break;
         case AST_INDEX:
             gen_expr(ast->index.arr, out);
-            fprintf(out, "[");
+            fprintf(out, ".data[");
             gen_expr(ast->index.idx, out);
             fprintf(out, "]");
             break;
         case AST_LEN:
-            fprintf(out, "sizeof(");
             gen_expr(ast->len.arr, out);
-            fprintf(out, ")/sizeof(int)");
+            fprintf(out, ".len");
             break;
         default:
             break;
@@ -195,7 +201,11 @@ static void gen_stmt(AST *ast, FILE *out, int indent) {
             break;
         case AST_PUSH: {
             gen_indent(out, indent);
-            fprintf(out, "/* push to array */\n");
+            fprintf(out, "ado_push(&");
+            gen_expr(ast->push.arr, out);
+            fprintf(out, ",");
+            gen_expr(ast->push.val, out);
+            fprintf(out, ");\n");
             break;
         }
         case AST_ASSIGN:
@@ -219,7 +229,22 @@ static void gen_stmt(AST *ast, FILE *out, int indent) {
 void codegen(AST *ast, FILE *out) {
     fprintf(out, "#include <stdio.h>\n");
     fprintf(out, "#include <stdlib.h>\n");
-    fprintf(out, "#include <string.h>\n\n");
+    fprintf(out, "#include <string.h>\n");
+    // Runtime library (inline)
+    fprintf(out, "typedef struct { int *data; int len; int cap; } AdoArray;\n");
+    fprintf(out, "static AdoArray ado_make_array(int *init, int c) {\n");
+    fprintf(out, "  AdoArray a; a.len=c; a.cap=c>0?c:4; a.data=malloc(a.cap*sizeof(int));\n");
+    fprintf(out, "  for(int i=0;i<c;i++) a.data[i]=init[i]; return a;\n");
+    fprintf(out, "}\n");
+    fprintf(out, "static void ado_push(AdoArray *a, int v) {\n");
+    fprintf(out, "  if(a->len>=a->cap){a->cap=a->cap?a->cap*2:4;a->data=realloc(a->data,a->cap*sizeof(int));}\n");
+    fprintf(out, "  a->data[a->len++]=v;\n");
+    fprintf(out, "}\n");
+    fprintf(out, "static int ado_abs(int x) { return x<0?-x:x; }\n");
+    fprintf(out, "static int ado_min(int a, int b) { return a<b?a:b; }\n");
+    fprintf(out, "static int ado_max(int a, int b) { return a>b?a:b; }\n");
+    fprintf(out, "static int ado_clamp(int x, int l, int h) { return x<l?l:(x>h?h:x); }\n");
+    fprintf(out, "static int ado_pow(int b, int e) { int r=1; for(int i=0;i<e;i++) r*=b; return r; }\n\n");
     
     int has_main = 0;
     

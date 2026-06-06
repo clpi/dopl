@@ -7,15 +7,24 @@ static void advance(Parser *p) { p->cur = lexer_next(p->lex); }
 static AST *parse_expr(Parser *p);
 static AST *parse_stmt(Parser *p);
 
+#define POOL_CHUNK 512
+
 Parser *parser_new(Lexer *lex) {
     Parser *p = malloc(sizeof(Parser));
     p->lex = lex;
+    p->pool = NULL;
+    p->pool_count = 0;
+    p->pool_cap = 0;
     advance(p);
     return p;
 }
 
-static AST *new_ast(ASTType type) {
-    AST *ast = malloc(sizeof(AST));
+static AST *new_ast(Parser *p, ASTType type) {
+    if (p->pool_count >= p->pool_cap) {
+        p->pool_cap = p->pool_cap ? p->pool_cap * 2 : POOL_CHUNK;
+        p->pool = realloc(p->pool, p->pool_cap * sizeof(AST));
+    }
+    AST *ast = &p->pool[p->pool_count++];
     memset(ast, 0, sizeof(AST));
     ast->type = type;
     return ast;
@@ -56,34 +65,36 @@ static char *esc_str(char *s) {
 
 static AST *parse_primary(Parser *p) {
     if (p->cur.type == TOK_INT) {
-        AST *ast = new_ast(AST_INT);
-        ast->int_val = atoi(p->cur.value);
+        AST *ast = new_ast(p, AST_INT);
+        ast->int_val = p->cur.int_val;
         free(p->cur.value);
+        p->cur.value = NULL;
         advance(p);
         return ast;
     }
     if (p->cur.type == TOK_STR) {
-        AST *ast = new_ast(AST_STR);
+        AST *ast = new_ast(p, AST_STR);
         ast->str_val = esc_str(p->cur.value);
         free(p->cur.value);
+        p->cur.value = NULL;
         advance(p);
         return ast;
     }
     if (p->cur.type == TOK_TRUE) {
-        AST *ast = new_ast(AST_BOOL);
+        AST *ast = new_ast(p, AST_BOOL);
         ast->bool_val = 1;
         advance(p);
         return ast;
     }
     if (p->cur.type == TOK_FALSE) {
-        AST *ast = new_ast(AST_BOOL);
+        AST *ast = new_ast(p, AST_BOOL);
         ast->bool_val = 0;
         advance(p);
         return ast;
     }
     if (p->cur.type == TOK_LBRACKET) {
         advance(p);
-        AST *ast = new_ast(AST_ARRAY);
+        AST *ast = new_ast(p, AST_ARRAY);
         int cap = 4;
         ast->array.elems = malloc(cap * sizeof(AST*));
         ast->array.count = 0;
@@ -103,7 +114,7 @@ static AST *parse_primary(Parser *p) {
         advance(p);
         if (p->cur.type == TOK_LPAREN) {
             advance(p);
-            AST *ast = new_ast(AST_CALL);
+            AST *ast = new_ast(p, AST_CALL);
             ast->call.name = name;
             ast->call.args = NULL;
             ast->call.argc = 0;
@@ -125,14 +136,14 @@ static AST *parse_primary(Parser *p) {
         }
         if (p->cur.type == TOK_LBRACKET) {
             advance(p);
-            AST *ast = new_ast(AST_INDEX);
-            ast->index.arr = new_ast(AST_VAR);
+            AST *ast = new_ast(p, AST_INDEX);
+            ast->index.arr = new_ast(p, AST_VAR);
             ast->index.arr->var_name = name;
             ast->index.idx = parse_expr(p);
             advance(p);
             return ast;
         }
-        AST *ast = new_ast(AST_VAR);
+        AST *ast = new_ast(p, AST_VAR);
         ast->var_name = name;
         return ast;
     }
@@ -144,7 +155,7 @@ static AST *parse_primary(Parser *p) {
     }
     if (p->cur.type == TOK_NOT) {
         advance(p);
-        AST *ast = new_ast(AST_UNARY);
+        AST *ast = new_ast(p, AST_UNARY);
         ast->unary.op = TOK_NOT;
         ast->unary.operand = parse_primary(p);
         return ast;
@@ -157,7 +168,7 @@ static AST *parse_term(Parser *p) {
     while (p->cur.type == TOK_STAR || p->cur.type == TOK_SLASH || p->cur.type == TOK_PERCENT) {
         TokenType op = p->cur.type;
         advance(p);
-        AST *ast = new_ast(AST_BINOP);
+        AST *ast = new_ast(p, AST_BINOP);
         ast->binop.left = left;
         ast->binop.op = op;
         ast->binop.right = parse_primary(p);
@@ -171,7 +182,7 @@ static AST *parse_arith(Parser *p) {
     while (p->cur.type == TOK_PLUS || p->cur.type == TOK_MINUS) {
         TokenType op = p->cur.type;
         advance(p);
-        AST *ast = new_ast(AST_BINOP);
+        AST *ast = new_ast(p, AST_BINOP);
         ast->binop.left = left;
         ast->binop.op = op;
         ast->binop.right = parse_term(p);
@@ -185,7 +196,7 @@ static AST *parse_expr(Parser *p) {
     while (p->cur.type >= TOK_EQ && p->cur.type <= TOK_GE) {
         TokenType op = p->cur.type;
         advance(p);
-        AST *ast = new_ast(AST_BINOP);
+        AST *ast = new_ast(p, AST_BINOP);
         ast->binop.left = left;
         ast->binop.op = op;
         ast->binop.right = parse_arith(p);
@@ -194,7 +205,7 @@ static AST *parse_expr(Parser *p) {
     while (p->cur.type == TOK_AND || p->cur.type == TOK_OR) {
         TokenType op = p->cur.type;
         advance(p);
-        AST *ast = new_ast(AST_BINOP);
+        AST *ast = new_ast(p, AST_BINOP);
         ast->binop.left = left;
         ast->binop.op = op;
         ast->binop.right = parse_expr(p);
@@ -205,7 +216,7 @@ static AST *parse_expr(Parser *p) {
 
 static AST *parse_block(Parser *p) {
     advance(p);
-    AST *ast = new_ast(AST_BLOCK);
+    AST *ast = new_ast(p, AST_BLOCK);
     int cap = 64;
     ast->block.stmts = malloc(cap * sizeof(AST*));
     ast->block.count = 0;
@@ -223,7 +234,7 @@ static AST *parse_block(Parser *p) {
 static AST *parse_stmt(Parser *p) {
     if (p->cur.type == TOK_LET) {
         advance(p);
-        AST *ast = new_ast(AST_LET);
+        AST *ast = new_ast(p, AST_LET);
         ast->let.name = p->cur.value;
         advance(p);
         advance(p);
@@ -232,7 +243,7 @@ static AST *parse_stmt(Parser *p) {
     }
     if (p->cur.type == TOK_IF) {
         advance(p);
-        AST *ast = new_ast(AST_IF);
+        AST *ast = new_ast(p, AST_IF);
         ast->if_stmt.cond = parse_expr(p);
         ast->if_stmt.then = parse_block(p);
         ast->if_stmt.els = NULL;
@@ -244,14 +255,14 @@ static AST *parse_stmt(Parser *p) {
     }
     if (p->cur.type == TOK_WHILE) {
         advance(p);
-        AST *ast = new_ast(AST_WHILE);
+        AST *ast = new_ast(p, AST_WHILE);
         ast->while_stmt.cond = parse_expr(p);
         ast->while_stmt.body = parse_block(p);
         return ast;
     }
     if (p->cur.type == TOK_FOR) {
         advance(p);
-        AST *ast = new_ast(AST_FOR);
+        AST *ast = new_ast(p, AST_FOR);
         ast->for_stmt.var = p->cur.value;
         advance(p);
         if (p->cur.type == TOK_IN) advance(p);
@@ -263,14 +274,14 @@ static AST *parse_stmt(Parser *p) {
     }
     if (p->cur.type == TOK_RETURN) {
         advance(p);
-        AST *ast = new_ast(AST_RETURN);
+        AST *ast = new_ast(p, AST_RETURN);
         ast->ret.val = parse_expr(p);
         return ast;
     }
     if (p->cur.type == TOK_PRINT) {
         advance(p);
         advance(p);
-        AST *ast = new_ast(AST_PRINT);
+        AST *ast = new_ast(p, AST_PRINT);
         int cap = 4;
         ast->print.vals = malloc(cap * sizeof(AST*));
         ast->print.count = 0;
@@ -288,7 +299,7 @@ static AST *parse_stmt(Parser *p) {
     if (p->cur.type == TOK_LEN) {
         advance(p);
         advance(p);
-        AST *ast = new_ast(AST_LEN);
+        AST *ast = new_ast(p, AST_LEN);
         ast->len.arr = parse_expr(p);
         advance(p);
         return ast;
@@ -296,8 +307,8 @@ static AST *parse_stmt(Parser *p) {
     if (p->cur.type == TOK_PUSH) {
         advance(p);
         advance(p);
-        AST *ast = new_ast(AST_PUSH);
-        ast->push.arr = new_ast(AST_VAR);
+        AST *ast = new_ast(p, AST_PUSH);
+        ast->push.arr = new_ast(p, AST_VAR);
         ast->push.arr->var_name = p->cur.value;
         advance(p);
         advance(p);
@@ -315,8 +326,8 @@ static AST *parse_stmt(Parser *p) {
         advance(p);
         if (p->cur.type == TOK_ASSIGN) {
             advance(p);
-            AST *ast = new_ast(AST_ASSIGN);
-            ast->assign.target = new_ast(AST_VAR);
+            AST *ast = new_ast(p, AST_ASSIGN);
+            ast->assign.target = new_ast(p, AST_VAR);
             ast->assign.target->var_name = name;
             ast->assign.val = parse_expr(p);
             return ast;
@@ -327,16 +338,16 @@ static AST *parse_stmt(Parser *p) {
             advance(p);
             if (p->cur.type == TOK_ASSIGN) {
                 advance(p);
-                AST *ast = new_ast(AST_ASSIGN);
-                ast->assign.target = new_ast(AST_INDEX);
-                ast->assign.target->index.arr = new_ast(AST_VAR);
+                AST *ast = new_ast(p, AST_ASSIGN);
+                ast->assign.target = new_ast(p, AST_INDEX);
+                ast->assign.target->index.arr = new_ast(p, AST_VAR);
                 ast->assign.target->index.arr->var_name = name;
                 ast->assign.target->index.idx = idx;
                 ast->assign.val = parse_expr(p);
                 return ast;
             }
-            AST *ast = new_ast(AST_INDEX);
-            ast->index.arr = new_ast(AST_VAR);
+            AST *ast = new_ast(p, AST_INDEX);
+            ast->index.arr = new_ast(p, AST_VAR);
             ast->index.arr->var_name = name;
             ast->index.idx = idx;
             return ast;
@@ -344,7 +355,7 @@ static AST *parse_stmt(Parser *p) {
         if (p->cur.type == TOK_LPAREN) {
             // Function call
             advance(p);
-            AST *ast = new_ast(AST_CALL);
+            AST *ast = new_ast(p, AST_CALL);
             ast->call.name = name;
             ast->call.args = NULL;
             ast->call.argc = 0;
@@ -371,7 +382,7 @@ static AST *parse_stmt(Parser *p) {
 }
 
 AST *parse_program(Parser *p) {
-    AST *prog = new_ast(AST_BLOCK);
+    AST *prog = new_ast(p, AST_BLOCK);
     int cap = 64;
     prog->block.stmts = malloc(cap * sizeof(AST*));
     prog->block.count = 0;
@@ -379,7 +390,7 @@ AST *parse_program(Parser *p) {
     while (p->cur.type != TOK_EOF) {
         if (p->cur.type == TOK_FN) {
             advance(p);
-            AST *fn = new_ast(AST_FN);
+            AST *fn = new_ast(p, AST_FN);
             fn->fn.name = p->cur.value;
             advance(p);
             advance(p);
@@ -415,74 +426,74 @@ AST *parse_program(Parser *p) {
     return prog;
 }
 
-void ast_free(AST *ast) {
+static void ast_free_children(AST *ast) {
     if (!ast) return;
     switch (ast->type) {
         case AST_BINOP:
-            ast_free(ast->binop.left);
-            ast_free(ast->binop.right);
+            ast_free_children(ast->binop.left);
+            ast_free_children(ast->binop.right);
             break;
         case AST_UNARY:
-            ast_free(ast->unary.operand);
+            ast_free_children(ast->unary.operand);
             break;
         case AST_CALL:
-            for (int i = 0; i < ast->call.argc; i++) ast_free(ast->call.args[i]);
+            for (int i = 0; i < ast->call.argc; i++) ast_free_children(ast->call.args[i]);
             free(ast->call.args);
             break;
         case AST_LET:
             free(ast->let.name);
-            ast_free(ast->let.val);
+            ast_free_children(ast->let.val);
             break;
         case AST_IF:
-            ast_free(ast->if_stmt.cond);
-            ast_free(ast->if_stmt.then);
-            ast_free(ast->if_stmt.els);
+            ast_free_children(ast->if_stmt.cond);
+            ast_free_children(ast->if_stmt.then);
+            ast_free_children(ast->if_stmt.els);
             break;
         case AST_WHILE:
-            ast_free(ast->while_stmt.cond);
-            ast_free(ast->while_stmt.body);
+            ast_free_children(ast->while_stmt.cond);
+            ast_free_children(ast->while_stmt.body);
             break;
         case AST_FOR:
             free(ast->for_stmt.var);
-            ast_free(ast->for_stmt.start);
-            ast_free(ast->for_stmt.end);
-            ast_free(ast->for_stmt.body);
+            ast_free_children(ast->for_stmt.start);
+            ast_free_children(ast->for_stmt.end);
+            ast_free_children(ast->for_stmt.body);
             break;
         case AST_RETURN:
-            ast_free(ast->ret.val);
+            ast_free_children(ast->ret.val);
             break;
         case AST_BLOCK:
-            for (int i = 0; i < ast->block.count; i++) ast_free(ast->block.stmts[i]);
+            for (int i = 0; i < ast->block.count; i++) ast_free_children(ast->block.stmts[i]);
             free(ast->block.stmts);
             break;
         case AST_FN:
             free(ast->fn.name);
             for (int i = 0; i < ast->fn.paramc; i++) free(ast->fn.params[i]);
             free(ast->fn.params);
-            ast_free(ast->fn.body);
+            ast_free_children(ast->fn.body);
             break;
         case AST_ARRAY:
-            for (int i = 0; i < ast->array.count; i++) ast_free(ast->array.elems[i]);
+            for (int i = 0; i < ast->array.count; i++) ast_free_children(ast->array.elems[i]);
             free(ast->array.elems);
             break;
         case AST_INDEX:
-            ast_free(ast->index.arr);
-            ast_free(ast->index.idx);
+            ast_free_children(ast->index.arr);
+            ast_free_children(ast->index.idx);
             break;
         case AST_ASSIGN:
-            ast_free(ast->assign.target);
-            ast_free(ast->assign.val);
+            ast_free_children(ast->assign.target);
+            ast_free_children(ast->assign.val);
             break;
         case AST_PRINT:
-            for (int i = 0; i < ast->print.count; i++) ast_free(ast->print.vals[i]);
+            for (int i = 0; i < ast->print.count; i++) ast_free_children(ast->print.vals[i]);
             free(ast->print.vals);
             break;
         case AST_LEN:
-            ast_free(ast->len.arr);
+            ast_free_children(ast->len.arr);
             break;
         case AST_PUSH:
-            ast_free(ast->push.arr);
-            ast_free(ast->push.val);
+            ast_free_children(ast->push.arr);
+            ast_free_children(ast->push.val);
             break;
         case AST_VAR:
             free(ast->var_name);
@@ -493,5 +504,19 @@ void ast_free(AST *ast) {
         default:
             break;
     }
+}
+
+void ast_free(AST *ast) {
+    ast_free_children(ast);
     free(ast);
+}
+
+void parser_free(Parser *p) {
+    if (!p) return;
+    if (p->pool_count > 0) {
+        ast_free_children(&p->pool[0]);
+    }
+    free(p->pool);
+    free(p->cur.value);
+    free(p);
 }

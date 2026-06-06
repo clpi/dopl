@@ -11,7 +11,7 @@ syn keyword doFunction main nextgroup=doFunctionCall
 syn match doNumber '\d\+'
 syn match doOperator '[+\-*/<>=!]'
 syn match doFunction '\w\+\ze('
-syn region doComment start="//" end="$"
+syn region doComment start="#" end="$"
 
 hi def link doKeyword Keyword
 hi def link doFunction Function

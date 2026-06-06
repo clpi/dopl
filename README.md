@@ -37,19 +37,22 @@ A lightweight, performant programming language that compiles to C.
 
 ```bash
 # Build compiler
-./build.sh
+make
 
-# Set up development environment
-./setup-dev.sh
+# Build + install system-wide (binary + LSP)
+sudo make install
 
-# Launch IDE
-./ado-edit example.do
-
-# Or compile and run directly
+# Compile and run a file
 ./doc example.do
+
+# Or use the installed binary
+ado example.do
 
 # Interactive REPL
 ./doc
+
+# Launch IDE (from repo)
+./do-edit example.do
 ```
 
 ## Syntax
@@ -76,10 +79,17 @@ fn main() {
 }
 ```
 
-## Build
+## Build & Install
 
 ```bash
-./build.sh
+# Build the compiler
+make
+
+# Install binary (ado) and LSP (do-lsp) to /usr/local/bin
+sudo make install
+
+# Uninstall
+sudo make uninstall
 ```
 
 ## Usage
@@ -103,11 +113,14 @@ fn main() {
 
 ## Development Setup
 
-Run the setup script for a complete IDE experience:
+For a full IDE experience with LSP and Tree-sitter, install the tools then use the launcher:
 
 ```bash
-./setup-dev.sh
-./ado-edit example.do
+# Install LSP system-wide (after building)
+sudo make install
+
+# Launch Neovim with full IDE support (from repo)
+./do-edit example.do
 ```
 
 This launches Neovim with:
@@ -194,9 +207,9 @@ Source (.do) → Lexer → Parser → AST → Codegen → C → Binary
 ```
 .
 ├── doc                 # Compiler binary
-├── build.sh            # Build script
-├── setup-dev.sh        # IDE setup script
-├── ado-edit            # Neovim launcher
+├── Makefile            # Build and install targets
+├── build.sh            # Build script (delegates to make)
+├── do-edit             # Neovim launcher (from repo)
 ├── main.c              # Main entry point
 ├── lexer.c/h           # Lexer
 ├── parser.c/h          # Parser

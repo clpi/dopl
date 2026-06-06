@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
@@ -11,32 +13,26 @@
 #define MAX_BUFFER_LEN 65536
 
 char *read_file(char *path) {
-    FILE *f = fopen(path, "r");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (len < 0 || len > 10 * 1024 * 1024) {
-        fclose(f);
-        fprintf(stderr, "Error: File too large or read error\n");
+    struct stat st;
+    if (stat(path, &st) != 0) return NULL;
+    if (st.st_size > 10 * 1024 * 1024) {
+        fprintf(stderr, "Error: File too large\n");
         return NULL;
     }
+    size_t len = st.st_size;
+    FILE *f = fopen(path, "r");
+    if (!f) return NULL;
     char *buf = malloc(len + 1);
     size_t read_len = fread(buf, 1, len, f);
-    if (read_len != (size_t)len) {
+    fclose(f);
+    if (read_len != len) {
         free(buf);
-        fclose(f);
         fprintf(stderr, "Error: Failed to read file completely\n");
         return NULL;
     }
     buf[len] = '\0';
-    fclose(f);
     return buf;
 }
-
-#include <unistd.h>
-
-#define MAX_PATH_LEN 1024
 
 int compile_and_run(AST *ast) {
     char temp_dir[] = "/tmp/ado_XXXXXX";
@@ -60,7 +56,7 @@ int compile_and_run(AST *ast) {
     fclose(out);
 
     char cmd[MAX_CMD_LEN];
-    snprintf(cmd, sizeof(cmd), "cc -O2 -o %s %s 2>/dev/null", bin_path, src_path);
+    snprintf(cmd, sizeof(cmd), "cc -O1 -o %s %s 2>/dev/null", bin_path, src_path);
     int ret = system(cmd);
 
     if (ret == 0) {
@@ -147,8 +143,7 @@ void repl(void) {
                 printf("Error compiling or running code\n");
             }
             
-            ast_free(ast);
-            free(p);
+            parser_free(p);
             lexer_free(lex);
             free(src);
             buffer[0] = '\0';
@@ -178,8 +173,7 @@ int main(int argc, char **argv) {
         int ret = compile_and_run(ast);
         (void)ret;
         
-        ast_free(ast);
-        free(p);
+        parser_free(p);
         lexer_free(lex);
         free(src);
         
@@ -199,8 +193,7 @@ int main(int argc, char **argv) {
     
     int ret = compile_and_run(ast);
     
-    ast_free(ast);
-    free(p);
+    parser_free(p);
     lexer_free(lex);
     free(src);
     

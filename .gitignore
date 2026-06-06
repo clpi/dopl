@@ -10,3 +10,5 @@ out.c
 *.pkg.tar.zst
 tmp_install/
 dist/
+plc.dSYM/
+ado-edit
