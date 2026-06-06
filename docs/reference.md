@@ -138,6 +138,92 @@ push(arr, 10)
 print(arr[1]) # Prints 10
 ```
 
+## Standard Library
+
+Ado includes an inline standard library with math and array helpers. All functions use the `ado_` prefix to avoid conflicts with user-defined functions.
+
+### Array Functions
+
+| Function | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `ado_contains(arr, val)` | Check if array contains value | `ado_contains([1,2,3], 2)` | `1` (true) |
+| `ado_pop(arr)` | Remove and return last element | `ado_pop([10, 20, 30])` | `30` |
+| `ado_reverse(arr)` | Reverse array in place | `ado_reverse([1,2,3])` | array becomes `[3,2,1]` |
+| `ado_remove(arr, idx)` | Remove element at index | `ado_remove([1,2,3], 1)` | `[1,3]` |
+| `ado_insert(arr, idx, val)` | Insert value at index | `ado_insert([1,3], 1, 2)` | `[1,2,3]` |
+| `ado_sum(arr)` | Sum all elements | `ado_sum([1,2,3])` | `6` |
+| `ado_avg(arr)` | Average of elements | `ado_avg([1,2,3,4])` | `2` |
+| `ado_factorial(n)` | Factorial | `ado_factorial(5)` | `120` |
+| `ado_fib(n)` | Fibonacci (0-indexed) | `ado_fib(10)` | `55` |
+| `ado_count_if(arr, val)` | Count occurrences | `ado_count_if([1,2,2,3], 2)` | `2` |
+| `ado_filter(arr, val)` | New array without value | `ado_filter([1,2,1,3], 1)` | `[2,3]` |
+| `ado_find(arr, val)` | First index or -1 | `ado_find([1,2,3], 2)` | `1` |
+| `ado_all(arr)` | All truthy | `ado_all([1,0,1])` | `0` |
+| `ado_any(arr)` | Any truthy | `ado_any([0,0,1])` | `1` |
+
+### Array Transform Functions
+
+These return new arrays without mutating the input:
+
+```ado
+let arr = [1, 2, 3, 4, 5]
+let first3 = ado_take(arr, 3)     # [1, 2, 3]
+let rest = ado_drop(arr, 2)       # [3, 4, 5]
+let doubled = ado_map(arr, ado_fib)  # not yet implemented in v1
+let merged = ado_concat([1,2], [3,4]) # [1,2,3,4]
+let zeros = ado_fill(5, 0)        # [0, 0, 0, 0, 0]
+```
+
+### Math Functions
+
+| Function | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `ado_abs(x)` | Absolute value | `ado_abs(-5)` | `5` |
+| `ado_min(a, b)` | Minimum of two values | `ado_min(3, 7)` | `3` |
+| `ado_max(a, b)` | Maximum of two values | `ado_max(3, 7)` | `7` |
+| `ado_clamp(x, lo, hi)` | Clamp x between lo and hi | `ado_clamp(5, 0, 10)` | `5` |
+| `ado_pow(base, exp)` | Integer exponentiation | `ado_pow(2, 10)` | `1024` |
+| `ado_sign(x)` | Sign of x (-1, 0, or 1) | `ado_sign(-10)` | `-1` |
+| `ado_is_even(x)` | True if x is even | `ado_is_even(4)` | `1` |
+| `ado_is_odd(x)` | True if x is odd | `ado_is_odd(7)` | `1` |
+| `ado_gcd(a, b)` | Greatest common divisor | `ado_gcd(12, 8)` | `4` |
+| `ado_lcm(a, b)` | Least common multiple | `ado_lcm(6, 4)` | `12` |
+
+## Functional Programming
+
+Ado supports basic functional patterns through its stdlib:
+
+```ado
+fn is_even(n) {
+  return ado_is_even(n)
+}
+
+fn main() {
+  let nums = [1, 2, 3, 4, 5, 6]
+  let evens = ado_filter(nums, 0)
+  let sum_sq = 0
+  let i = 0
+  while i < len(evens) {
+    sum_sq = sum_sq + (evens[i] * evens[i])
+    i = i + 1
+  }
+  print(sum_sq)
+  return 0
+}
+```
+
+Higher-order functions like `map` and `reduce` can be implemented using loops since Ado does not yet support function pointers as first-class values.
+
+## Array Index Assignment
+
+Arrays support element assignment using bracket notation:
+
+```ado
+let arr = [10, 20, 30]
+arr[0] = 99
+print(arr[0]) # Prints 99
+```
+
 ## Compilation Process
 
 1. **Lexing**: Source text is broken into tokens.

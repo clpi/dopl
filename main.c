@@ -154,42 +154,58 @@ void repl(void) {
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        repl();
-        return 0;
+        fprintf(stderr, "Usage: doc [--target c|wasm] <file.do>\n");
+        fprintf(stderr, "  --target wasm  Output WebAssembly module (.wat)\n");
+        return 1;
     }
     
-    if (strcmp(argv[1], "-i") == 0 && argc >= 3) {
-        // Interactive with file as template
-        char *src = read_file(argv[2]);
-        if (!src) {
-            fprintf(stderr, "Error: Cannot read file %s\n", argv[2]);
-            return 1;
+    const char *target = "c";
+    const char *src_path = NULL;
+    
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--target") == 0 && i + 1 < argc) {
+            target = argv[++i];
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            fprintf(stderr, "Ado Compiler v1.0\n");
+            fprintf(stderr, "Usage: doc [--target c|wasm] <file.do>\n");
+            fprintf(stderr, "\nTargets:\n");
+            fprintf(stderr, "  c      C code (default, compiles and runs)\n");
+            fprintf(stderr, "  wasm   WebAssembly (.wat format)\n");
+            return 0;
+        } else {
+            src_path = argv[i];
         }
-        // Execute file then start REPL
-        Lexer *lex = lexer_new(src);
-        Parser *p = parser_new(lex);
-        AST *ast = parse_program(p);
-        
-        int ret = compile_and_run(ast);
-        (void)ret;
-        
-        parser_free(p);
-        lexer_free(lex);
-        free(src);
-        
-        repl();
-        return 0;
     }
     
-    char *src = read_file(argv[1]);
+    if (!src_path) {
+        fprintf(stderr, "Error: No input file specified\n");
+        return 1;
+    }
+    
+    char *src = read_file(src_path);
     if (!src) {
-        fprintf(stderr, "Error: Cannot read file %s\n", argv[1]);
+        fprintf(stderr, "Error: Cannot read file %s\n", src_path);
         return 1;
     }
     
     Lexer *lex = lexer_new(src);
     Parser *p = parser_new(lex);
     AST *ast = parse_program(p);
+    
+    if (strcmp(target, "wasm") == 0) {
+        char wat_path[MAX_PATH_LEN];
+        snprintf(wat_path, sizeof(wat_path), "%s.wat", src_path);
+        FILE *wat_out = fopen(wat_path, "w");
+        if (!wat_out) {
+            fprintf(stderr, "Error: Cannot write %s\n", wat_path);
+            return 1;
+        }
+        codegen_wasm(ast, wat_out);
+        fclose(wat_out);
+        fprintf(stderr, "WAT output written to %s\n", wat_path);
+        fprintf(stderr, "Compile to WASM with: wat2wasm %s -o %s.wasm\n", wat_path, src_path);
+        return 0;
+    }
     
     int ret = compile_and_run(ast);
     

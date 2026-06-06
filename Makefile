@@ -5,12 +5,12 @@ LDFLAGS ?=
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 
-SRCS = main.c lexer.c parser.c codegen.c
+SRCS = main.c lexer.c parser.c codegen.c codegen_wasm.c
 OBJS = $(SRCS:.c=.o)
 
 TEST_SRCS = test_main.c lexer.c parser.c codegen.c
 
-.PHONY: all clean test bench install install-lsp uninstall
+.PHONY: all clean test bench install install-lsp uninstall wasm-test
 
 all: doc
 
@@ -22,6 +22,17 @@ test_main: $(TEST_SRCS)
 
 test: doc test_main
 	./test.sh
+
+wasm: doc
+	./doc --target wasm examples/stdlib.do
+	wat2wasm examples/stdlib.do.wat -o examples/stdlib.do.wasm
+	@echo "WASM module ready: examples/stdlib.do.wasm"
+
+wasm-test: doc
+	@echo "Building WASM test..."
+	./doc --target wasm examples/stdlib.do
+	wat2wasm examples/stdlib.do.wat -o examples/stdlib.do.wasm
+	@echo "WASM module ready: examples/stdlib.do.wasm"
 
 bench: doc
 	./benchmarks/run.sh

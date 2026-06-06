@@ -160,6 +160,14 @@ static AST *parse_primary(Parser *p) {
         ast->unary.operand = parse_primary(p);
         return ast;
     }
+    if (p->cur.type == TOK_LEN) {
+        advance(p);
+        advance(p);
+        AST *ast = new_ast(p, AST_LEN);
+        ast->len.arr = parse_expr(p);
+        advance(p);
+        return ast;
+    }
     return NULL;
 }
 

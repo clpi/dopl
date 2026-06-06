@@ -5,5 +5,6 @@
 #include <stdio.h>
 
 void codegen(AST *ast, FILE *out);
+void codegen_wasm(AST *ast, FILE *out);
 
 #endif
