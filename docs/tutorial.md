@@ -35,6 +35,18 @@ You should see:
 Hello, World from Ado!
 ```
 
+## Comments
+
+Ado supports single-line comments. Any text following a `#` on a line is ignored by the compiler.
+
+```ado
+# This is a comment
+fn main() {
+  let a = 1 # This is an inline comment
+  return 0
+}
+```
+
 ## Variables and Types
 
 Currently, Ado primarily supports integer types and arrays. Variables are declared using the `let` keyword.

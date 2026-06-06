@@ -31,6 +31,25 @@ fn main() {
 }
 ```
 
+## Fibonacci Sequence Calculator (`examples/fibonacci.do`)
+
+The Fibonacci sequence is another classic recursive algorithm.
+
+```ado
+# Fibonacci sequence calculator
+fn fibonacci(n) {
+  if n <= 1 {
+    return n
+  }
+  return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+fn main() {
+  print("Fibonacci(10) =", fibonacci(10))
+  return 0
+}
+```
+
 ## Conditional Expressions (`examples/conditionals.do`)
 
 Ado has comprehensive conditional support. These examples show how to build common utility functions like `max`, `min`, `abs`, and `clamp`.

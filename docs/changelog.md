@@ -6,6 +6,9 @@ All notable changes to the Ado language will be documented in this file.
 
 ### Added
 - Comprehensive markdown documentation inside the `docs/` folder, including `tutorial.md`, `examples.md`, `reference.md`, `use_cases.md`, and `roadmap.md`.
+- Expanded documentation including Fibonacci example, use cases, and reference details.
+- LSP scope resolution tracking utilizing `brace_count`.
+- Fixes for Neovim `.do` syntax highlighting (`vim/`).
 
 ## [0.1.0] - Initial Release
 

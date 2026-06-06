@@ -31,3 +31,6 @@ Ado ships with robust tools like a built-in Language Server Protocol (LSP) and T
 
 ## 5. WebAssembly Port
 With future WebAssembly support, Ado could be used to write highly optimized logic that executes directly in a web browser without the overhead of heavy garbage collectors.
+
+## 6. Scripting and Automation
+Ado can be used as a lightweight scripting language for automation tasks, providing a fast and efficient alternative to traditional scripting languages like bash or Python in resource-constrained environments.

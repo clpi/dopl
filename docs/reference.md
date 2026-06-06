@@ -98,7 +98,7 @@ for i in 1..10 {
 ## Functions
 
 Functions are defined with the `fn` keyword. The `main` function is the entry point of any executable Ado program.
-Functions can return values using the `return` keyword.
+Functions can return values using the `return` keyword. Functions can also return arrays, allowing complex data structures to be passed around.
 
 ```ado
 fn add(a, b) {

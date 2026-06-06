@@ -6,6 +6,7 @@ Ado is evolving. Here is a high-level roadmap of planned features and enhancemen
 
 - **Strings as Variables:** Allow strings to be assigned to variables, concatenated, and manipulated.
 - **Floating-Point Arithmetic:** Support for `float` / `double` numbers for complex math.
+- **Bitwise Operations:** Support for bitwise AND, OR, XOR, shifts, etc.
 
 ## Phase 2: Architecture and Tooling
 
