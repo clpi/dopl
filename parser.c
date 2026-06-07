@@ -566,112 +566,156 @@ AST *parse_program(Parser *p) {
     return prog;
 }
 
+
+static void ast_free_children(AST *ast);
+
+static void free_ast_binop(AST *ast) {
+    ast_free_children(ast->binop.left);
+    ast_free_children(ast->binop.right);
+}
+
+static void free_ast_unary(AST *ast) {
+    ast_free_children(ast->unary.operand);
+}
+
+static void free_ast_call(AST *ast) {
+    for (int i = 0; i < ast->call.argc; i++) ast_free_children(ast->call.args[i]);
+    free(ast->call.args);
+}
+
+static void free_ast_let(AST *ast) {
+    free(ast->let.name);
+    ast_free_children(ast->let.val);
+    if (ast->hint) free(ast->hint);
+}
+
+static void free_ast_if(AST *ast) {
+    ast_free_children(ast->if_stmt.cond);
+    ast_free_children(ast->if_stmt.then);
+    ast_free_children(ast->if_stmt.els);
+}
+
+static void free_ast_while(AST *ast) {
+    ast_free_children(ast->while_stmt.cond);
+    ast_free_children(ast->while_stmt.body);
+}
+
+static void free_ast_for(AST *ast) {
+    free(ast->for_stmt.var);
+    ast_free_children(ast->for_stmt.start);
+    ast_free_children(ast->for_stmt.end);
+    ast_free_children(ast->for_stmt.body);
+}
+
+static void free_ast_return(AST *ast) {
+    ast_free_children(ast->ret.val);
+}
+
+static void free_ast_block(AST *ast) {
+    for (int i = 0; i < ast->block.count; i++) ast_free_children(ast->block.stmts[i]);
+    free(ast->block.stmts);
+}
+
+static void free_ast_fn(AST *ast) {
+    free(ast->fn.name);
+    for (int i = 0; i < ast->fn.paramc; i++) free(ast->fn.params[i]);
+    free(ast->fn.params);
+    ast_free_children(ast->fn.body);
+}
+
+static void free_ast_array(AST *ast) {
+    for (int i = 0; i < ast->array.count; i++) ast_free_children(ast->array.elems[i]);
+    free(ast->array.elems);
+}
+
+static void free_ast_index(AST *ast) {
+    ast_free_children(ast->index.arr);
+    ast_free_children(ast->index.idx);
+}
+
+static void free_ast_slice(AST *ast) {
+    ast_free_children(ast->slice.arr);
+    ast_free_children(ast->slice.start);
+    ast_free_children(ast->slice.end);
+}
+
+static void free_ast_assign(AST *ast) {
+    ast_free_children(ast->assign.target);
+    ast_free_children(ast->assign.val);
+}
+
+static void free_ast_print(AST *ast) {
+    for (int i = 0; i < ast->print.count; i++) ast_free_children(ast->print.vals[i]);
+    free(ast->print.vals);
+}
+
+static void free_ast_len(AST *ast) {
+    ast_free_children(ast->len.arr);
+}
+
+static void free_ast_push(AST *ast) {
+    ast_free_children(ast->push.arr);
+    ast_free_children(ast->push.val);
+}
+
+static void free_ast_hint(AST *ast) {
+    free(ast->hint_stmt.name);
+}
+
+static void free_ast_var(AST *ast) {
+    free(ast->var_name);
+}
+
+static void free_ast_str(AST *ast) {
+    free(ast->str_val);
+}
+
+static void free_ast_match(AST *ast) {
+    ast_free_children(ast->match_stmt.expr);
+    for (int i = 0; i < ast->match_stmt.arm_count; i++) ast_free_children(ast->match_stmt.arms[i]);
+    free(ast->match_stmt.arms);
+}
+
+static void free_ast_enum(AST *ast) {
+    free(ast->enum_def.enum_name);
+    for (int i = 0; i < ast->enum_def.variant_count; i++) free(ast->enum_def.variants[i]);
+    free(ast->enum_def.variants);
+}
+
+static void free_ast_range(AST *ast) {
+    ast_free_children(ast->range.start);
+    ast_free_children(ast->range.end);
+}
+
 static void ast_free_children(AST *ast) {
     if (!ast) return;
     switch (ast->type) {
-        case AST_BINOP:
-            ast_free_children(ast->binop.left);
-            ast_free_children(ast->binop.right);
-            break;
-        case AST_UNARY:
-            ast_free_children(ast->unary.operand);
-            break;
-        case AST_CALL:
-            for (int i = 0; i < ast->call.argc; i++) ast_free_children(ast->call.args[i]);
-            free(ast->call.args);
-            break;
-        case AST_LET:
-            free(ast->let.name);
-            ast_free_children(ast->let.val);
-            if (ast->hint) free(ast->hint);
-            break;
-        case AST_IF:
-            ast_free_children(ast->if_stmt.cond);
-            ast_free_children(ast->if_stmt.then);
-            ast_free_children(ast->if_stmt.els);
-            break;
-        case AST_WHILE:
-            ast_free_children(ast->while_stmt.cond);
-            ast_free_children(ast->while_stmt.body);
-            break;
-        case AST_FOR:
-            free(ast->for_stmt.var);
-            ast_free_children(ast->for_stmt.start);
-            ast_free_children(ast->for_stmt.end);
-            ast_free_children(ast->for_stmt.body);
-            break;
-        case AST_RETURN:
-            ast_free_children(ast->ret.val);
-            break;
-        case AST_BLOCK:
-            for (int i = 0; i < ast->block.count; i++) ast_free_children(ast->block.stmts[i]);
-            free(ast->block.stmts);
-            break;
-        case AST_FN:
-            free(ast->fn.name);
-            for (int i = 0; i < ast->fn.paramc; i++) free(ast->fn.params[i]);
-            free(ast->fn.params);
-            ast_free_children(ast->fn.body);
-            break;
-        case AST_ARRAY:
-            for (int i = 0; i < ast->array.count; i++) ast_free_children(ast->array.elems[i]);
-            free(ast->array.elems);
-            break;
-        case AST_INDEX:
-            ast_free_children(ast->index.arr);
-            ast_free_children(ast->index.idx);
-            break;
-        case AST_SLICE:
-            ast_free_children(ast->slice.arr);
-            ast_free_children(ast->slice.start);
-            ast_free_children(ast->slice.end);
-            break;
-        case AST_ASSIGN:
-            ast_free_children(ast->assign.target);
-            ast_free_children(ast->assign.val);
-            break;
-            for (int i = 0; i < ast->print.count; i++) ast_free_children(ast->print.vals[i]);
-            free(ast->print.vals);
-            break;
-        case AST_LEN:
-            ast_free_children(ast->len.arr);
-            break;
-        case AST_PUSH:
-            ast_free_children(ast->push.arr);
-            ast_free_children(ast->push.val);
-            break;
-        case AST_HINT:
-            free(ast->hint_stmt.name);
-            break;
-        case AST_VAR:
-            free(ast->var_name);
-            break;
-        case AST_STR:
-            free(ast->str_val);
-            break;
-        case AST_MATCH:
-            ast_free_children(ast->match_stmt.expr);
-            for (int i = 0; i < ast->match_stmt.arm_count; i++) ast_free_children(ast->match_stmt.arms[i]);
-            free(ast->match_stmt.arms);
-            break;
-        case AST_ENUM:
-            free(ast->enum_def.enum_name);
-            for (int i = 0; i < ast->enum_def.variant_count; i++) free(ast->enum_def.variants[i]);
-            free(ast->enum_def.variants);
-            break;
-        case AST_RANGE:
-            ast_free_children(ast->range.start);
-            ast_free_children(ast->range.end);
-            break;
-            free(ast->enum_def.enum_name);
-            for (int i = 0; i < ast->enum_def.variant_count; i++) free(ast->enum_def.variants[i]);
-            free(ast->enum_def.variants);
-            break;
-        default:
-            break;
+        case AST_BINOP: free_ast_binop(ast); break;
+        case AST_UNARY: free_ast_unary(ast); break;
+        case AST_CALL: free_ast_call(ast); break;
+        case AST_LET: free_ast_let(ast); break;
+        case AST_IF: free_ast_if(ast); break;
+        case AST_WHILE: free_ast_while(ast); break;
+        case AST_FOR: free_ast_for(ast); break;
+        case AST_RETURN: free_ast_return(ast); break;
+        case AST_BLOCK: free_ast_block(ast); break;
+        case AST_FN: free_ast_fn(ast); break;
+        case AST_ARRAY: free_ast_array(ast); break;
+        case AST_INDEX: free_ast_index(ast); break;
+        case AST_SLICE: free_ast_slice(ast); break;
+        case AST_ASSIGN: free_ast_assign(ast); break;
+        case AST_PRINT: free_ast_print(ast); break;
+        case AST_LEN: free_ast_len(ast); break;
+        case AST_PUSH: free_ast_push(ast); break;
+        case AST_HINT: free_ast_hint(ast); break;
+        case AST_VAR: free_ast_var(ast); break;
+        case AST_STR: free_ast_str(ast); break;
+        case AST_MATCH: free_ast_match(ast); break;
+        case AST_ENUM: free_ast_enum(ast); break;
+        case AST_RANGE: free_ast_range(ast); break;
+        default: break;
     }
 }
-
 void ast_free(AST *ast) {
     ast_free_children(ast);
     free(ast);
