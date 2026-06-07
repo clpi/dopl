@@ -660,6 +660,7 @@ static void free_ast_push(AST *ast) {
 
 static void free_ast_hint(AST *ast) {
     free(ast->hint_stmt.name);
+    ast_free_children(ast->hint_stmt.args);
 }
 
 static void free_ast_var(AST *ast) {
