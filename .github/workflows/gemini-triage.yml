@@ -80,7 +80,6 @@ jobs:
           upload_artifacts: '${{ vars.UPLOAD_ARTIFACTS }}'
           workflow_name: 'gemini-triage'
           # Explicitly set the issue number to handle `issue_comment` triggers where the context might be ambiguous
-          github_issue_number: '${{ github.event.issue.number }}'
           settings: |-
             {
               "model": {
