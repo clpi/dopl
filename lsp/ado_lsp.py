@@ -39,7 +39,7 @@ class AdoLSP:
         self.keywords = ['fn', 'let', 'if', 'else', 'while', 'for', 'return', 'in',
                          'true', 'false', 'and', 'or', 'not', 'print', 'len', 'push',
                          'hint', 'type', 'inline', 'const', 'static']
-        self.builtins = ['print', 'len', 'push', 'push', 'abs', 'min', 'max', 'pow']
+        self.builtins = ['print', 'len', 'push', 'abs', 'min', 'max', 'pow', 'clamp', 'sign', 'is_even', 'is_odd', 'gcd', 'lcm', 'factorial', 'fib', 'sum', 'avg', 'take', 'drop', 'concat', 'fill', 'slice']
 
     def _mask_text(self, text: str) -> str:
         """Replace contents of string literals and comments with spaces to avoid false positives."""
@@ -497,7 +497,26 @@ class AdoLSP:
         col = msg['params']['position']['character']
 
         word = self.get_symbol_at_pos(uri, line, col)
-        if not word or word not in self.symbols:
+        if not word:
+            return None
+
+        # Check builtins first for better hover info
+        builtin_docs = {
+            'print': 'print(values...) - Print values to stdout',
+            'len': 'len(arr) - Get array length',
+            'push': 'push(&arr, val) - Append value to array',
+            'abs': 'abs(x) - Absolute value',
+            'min': 'min(a, b) - Minimum of two values',
+            'max': 'max(a, b) - Maximum of two values',
+            'pow': 'pow(base, exp) - Power function',
+            'clamp': 'clamp(x, low, high) - Clamp value to range',
+            'slice': 'arr[start..end] - Array slice (exclusive end)',
+        }
+
+        if word in builtin_docs:
+            return {'contents': {'kind': 'markdown', 'value': f"```ado\n{builtin_docs[word]}\n```"}}
+
+        if word not in self.symbols:
             return None
 
         sym = None
@@ -846,7 +865,6 @@ class AdoLSP:
                 elif char == '}':
                     if stack:
                         start_line, start_col = stack.pop()
-                        # Only fold if it spans multiple lines
                         if start_line < i:
                             folds.append({
                                 'startLine': start_line,
@@ -855,6 +873,26 @@ class AdoLSP:
                                 'endCharacter': j,
                                 'kind': 'region'
                             })
+        
+        # Also fold multi-line comments (# ... blocks)
+        in_comment_block = False
+        comment_start = 0
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith('#') and not in_comment_block:
+                in_comment_block = True
+                comment_start = i
+            elif not stripped.startswith('#') and in_comment_block and stripped:
+                if i - comment_start > 1:
+                    folds.append({
+                        'startLine': comment_start,
+                        'startCharacter': 0,
+                        'endLine': i - 1,
+                        'endCharacter': len(lines[i-1]),
+                        'kind': 'comment'
+                    })
+                in_comment_block = False
+        
         return folds
 
     def handle_code_lens(self, msg: dict) -> list:
@@ -1038,10 +1076,14 @@ class AdoLSP:
             'keyword': 0,
             'function': 1,
             'variable': 2,
-            'parameter': 3
+            'parameter': 3,
+            'operator': 4,
+            'string': 5,
+            'number': 6,
+            'comment': 7
         }
 
-        for i, line in enumerate(lines):
+        for i, (line, orig_line) in enumerate(zip(lines, text.split('\n'))):
             # Find keywords
             for kw in self.keywords:
                 for match in re.finditer(r'\b' + re.escape(kw) + r'\b', line):
@@ -1049,17 +1091,33 @@ class AdoLSP:
 
             # Find special operators: .. and ...
             for match in re.finditer(r'\.\.', line):
-                tokens.append((i, match.start(), match.end() - match.start(), token_types['keyword'], 0))
+                tokens.append((i, match.start(), match.end() - match.start(), token_types['operator'], 0))
             for match in re.finditer(r'\.\.\.', line):
-                tokens.append((i, match.start(), match.end() - match.start(), token_types['keyword'], 0))
+                tokens.append((i, match.start(), match.end() - match.start(), token_types['operator'], 0))
 
             # Find list comprehension pattern
             listcomp_match = re.search(r'\[\s*for\s+\w+\s+in', line)
             if listcomp_match:
-                # Highlight the whole list comprehension
                 for match in re.finditer(r'\[', line):
                     tokens.append((i, match.start(), match.end() - match.start(), token_types['keyword'], 0))
-            
+
+            # Find destructuring patterns in let statements
+            destruct_match = re.search(r'let\s*\[\s*', line)
+            if destruct_match:
+                # Highlight variable names in destructuring
+                for match in re.finditer(r'\[([^\]]+)\]', line):
+                    names_str = match.group(1)
+                    parts = [p.strip() for p in names_str.split(',')]
+                    for part in parts:
+                        if '...' in part:
+                            m = re.search(r'(\w+)', part)
+                            if m:
+                                tokens.append((i, match.start() + names_str.find(m.group(1)), 
+                                    m.end() - m.start(), token_types['variable'], 0))
+                        elif re.match(r'^\w+$', part):
+                            tokens.append((i, match.start() + names_str.find(part), 
+                                len(part), token_types['variable'], 0))
+
             # Find symbols
             for sym_name, sym_list in self.symbols.items():
                 if sym_name in self.keywords: continue
@@ -1114,7 +1172,7 @@ class AdoLSP:
                 },
                 'semanticTokensProvider': {
                     'legend': {
-                        'tokenTypes': ['keyword', 'function', 'variable', 'parameter'],
+                        'tokenTypes': ['keyword', 'function', 'variable', 'parameter', 'operator', 'string', 'number', 'comment'],
                         'tokenModifiers': []
                     },
                     'full': True

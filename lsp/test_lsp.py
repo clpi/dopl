@@ -195,5 +195,48 @@ class TestLSP(unittest.TestCase):
         labels = [item['label'] for item in result['items']]
         self.assertIn('destruct', labels)
 
+    def test_builtin_hover(self):
+        server = ado_lsp.AdoLSP()
+        uri = "file:///test.do"
+        server.docs[uri] = "print(x)"
+        msg = {'params': {'textDocument': {'uri': uri}, 'position': {'line': 0, 'character': 0}}}
+        result = server.handle_hover(msg)
+        self.assertIsNotNone(result)
+        self.assertIn('print', result['contents']['value'])
+
+    def test_slice_hover(self):
+        server = ado_lsp.AdoLSP()
+        uri = "file:///test.do"
+        server.docs[uri] = "slice(arr, 1, 3)"
+        msg = {'params': {'textDocument': {'uri': uri}, 'position': {'line': 0, 'character': 0}}}
+        result = server.handle_hover(msg)
+        self.assertIsNotNone(result)
+        self.assertIn('slice', result['contents']['value'])
+
+    def test_semantic_tokens_operators(self):
+        server = ado_lsp.AdoLSP()
+        server.docs["file:///test.do"] = "arr[1..5]"
+        server.parse_symbols("file:///test.do", server.docs["file:///test.do"])
+        msg = {'params': {'textDocument': {'uri': 'file:///test.do'}}}
+        result = server.handle_semantic_tokens_full(msg)
+        self.assertIn('data', result)
+
+    def test_inlay_hints_for_slice(self):
+        server = ado_lsp.AdoLSP()
+        text = "let x = arr[1..5]"
+        server.docs["file:///test.do"] = text
+        msg = {'params': {'textDocument': {'uri': 'file:///test.do'}, 'range': {'start': {'line': 0}, 'end': {'line': 1}}}}
+        hints = server.handle_inlay_hint(msg)
+        self.assertIsInstance(hints, list)
+
+    def test_call_hierarchy_with_slice(self):
+        server = ado_lsp.AdoLSP()
+        text = "fn main() {\n  let x = arr[1..5]\n}"
+        server.docs["file:///test.do"] = text
+        server.parse_symbols("file:///test.do", text)
+        msg = {'params': {'textDocument': {'uri': 'file:///test.do'}, 'position': {'line': 0, 'character': 4}}}
+        prep = server.handle_prepare_call_hierarchy(msg)
+        self.assertTrue(len(prep) > 0)
+
 if __name__ == '__main__':
     unittest.main()

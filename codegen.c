@@ -95,6 +95,13 @@ static void gen_expr(AST *ast, FILE *out) {
             gen_expr(ast->index.idx, out);
             fprintf(out, "]");
             break;
+        case AST_RANGE:
+            fprintf(out, "({ int _f=");
+            gen_expr(ast->range.start, out);
+            fprintf(out, ", _t=");
+            gen_expr(ast->range.end, out);
+            fprintf(out, ", _n, _i; _n=_t>=_f?_t-_f+1:0; AdoArray _r=ado_make_array((int[]){},_n); for(_i=0;_i<_n;_i++)_r.data[_i]=_f+_i; _r;})");
+            break;
         case AST_LEN:
             gen_expr(ast->len.arr, out);
             fprintf(out, ".len");
