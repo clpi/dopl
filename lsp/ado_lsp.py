@@ -35,11 +35,20 @@ class Reference:
 class AdoLSP:
     def __init__(self):
         self.docs: Dict[str, str] = {}
+        self.masked_docs: Dict[str, str] = {}
         self.symbols: Dict[str, List[Symbol]] = {}
         self.keywords = ['fn', 'let', 'if', 'else', 'while', 'for', 'return', 'in',
                          'true', 'false', 'and', 'or', 'not', 'print', 'len', 'push',
                          'hint', 'type', 'inline', 'const', 'static']
         self.builtins = ['print', 'len', 'push', 'abs', 'min', 'max', 'pow', 'clamp', 'sign', 'is_even', 'is_odd', 'gcd', 'lcm', 'factorial', 'fib', 'sum', 'avg', 'take', 'drop', 'concat', 'fill', 'slice']
+
+    def _get_masked_text(self, uri: str, text: str) -> str:
+        if uri in self.masked_docs and self.docs.get(uri) == text:
+            return self.masked_docs[uri]
+        masked = self._mask_text(text)
+        self.docs[uri] = text
+        self.masked_docs[uri] = masked
+        return masked
 
     def _mask_text(self, text: str) -> str:
         """Replace contents of string literals and comments with spaces to avoid false positives."""
@@ -65,7 +74,7 @@ class AdoLSP:
         return "".join(masked)
 
     def parse_symbols(self, uri: str, text: str):
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         symbols = []
         lines = text.split('\n')
         masked_lines = masked_text.split('\n')
@@ -208,7 +217,7 @@ class AdoLSP:
             self.symbols[sym.name].append(sym)
     def get_diagnostics(self, uri: str, text: str) -> List[dict]:
         diagnostics = []
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         # First check for unbalanced braces just in case
         lines = masked_text.split('\n')
         brace_stack = []
@@ -454,7 +463,7 @@ class AdoLSP:
         docs_to_search = {restrict_uri: self.docs[restrict_uri]} if restrict_uri and restrict_uri in self.docs else self.docs
 
         for doc_uri, text in docs_to_search.items():
-            masked_text = self._mask_text(text)
+            masked_text = self._get_masked_text(doc_uri, text)
             lines = masked_text.split('\n')
             for i, line in enumerate(lines):
                 if restrict_sym and restrict_sym.kind != 'function' and restrict_uri == doc_uri:
@@ -588,7 +597,7 @@ class AdoLSP:
         text = self.docs.get(uri)
         if not text: return []
 
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         lines = text.split('\n')
         masked_lines = masked_text.split('\n')
         formatted_lines = []
@@ -815,7 +824,7 @@ class AdoLSP:
         text = self.docs.get(uri)
         if not text: return []
 
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         lines = masked_text.split('\n')
 
         outgoing = []
@@ -852,7 +861,7 @@ class AdoLSP:
         text = self.docs.get(uri)
         if not text: return []
 
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         lines = masked_text.split('\n')
 
         folds = []
@@ -1008,7 +1017,7 @@ class AdoLSP:
         text = self.docs.get(uri)
         if not text: return []
 
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         lines = masked_text.split('\n')
 
         start_line = msg['params']['range']['start']['line']
@@ -1068,7 +1077,7 @@ class AdoLSP:
         text = self.docs.get(uri)
         if not text: return {'data': []}
 
-        masked_text = self._mask_text(text)
+        masked_text = self._get_masked_text(uri, text)
         lines = masked_text.split('\n')
 
         tokens = []
@@ -1203,6 +1212,14 @@ class AdoLSP:
                     self.docs[uri] = msg['params']['contentChanges'][0]['text']
                     self.parse_symbols(uri, self.docs[uri])
                     self.publish_diagnostics(uri)
+                elif method == 'textDocument/didClose':
+                    uri = msg['params']['textDocument']['uri']
+                    if uri in self.docs:
+                        del self.docs[uri]
+                    if uri in self.masked_docs:
+                        del self.masked_docs[uri]
+                    if uri in self.symbols:
+                        del self.symbols[uri]
                 elif method == 'textDocument/completion': result = self.handle_completion(msg)
                 elif method == 'textDocument/definition': result = self.handle_definition(msg)
                 elif method == 'textDocument/typeDefinition': result = self.handle_definition(msg)
