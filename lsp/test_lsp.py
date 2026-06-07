@@ -238,5 +238,19 @@ class TestLSP(unittest.TestCase):
         prep = server.handle_prepare_call_hierarchy(msg)
         self.assertTrue(len(prep) > 0)
 
+
+    def test_get_symbol_at_pos_out_of_bounds(self):
+        server = ado_lsp.AdoLSP()
+        uri = "file:///test.do"
+        server.docs[uri] = "let a = 1"
+
+        # Test out-of-bounds line
+        result = server.get_symbol_at_pos(uri, 100, 0)
+        self.assertIsNone(result)
+
+        # Test out-of-bounds column
+        result_col = server.get_symbol_at_pos(uri, 0, 100)
+        self.assertIsNone(result_col)
+
 if __name__ == '__main__':
     unittest.main()
