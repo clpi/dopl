@@ -51,13 +51,22 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y ruby ruby-dev rubygems gcc make rpm libarchive-tools zstd
+        sudo apt-get install -y ruby ruby-dev rubygems gcc make rpm libarchive-tools zstd libcurl4-openssl-dev
         sudo gem install fpm
 
     - name: Install cross-compiler (Linux aarch64)
       if: matrix.target == 'aarch64-linux'
       run: |
-        sudo apt-get install -y gcc-aarch64-linux-gnu
+        sudo dpkg --add-architecture arm64
+        cat <<EOF | sudo tee /etc/apt/sources.list.d/arm64.list
+        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ noble main restricted universe multiverse
+        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ noble-updates main restricted universe multiverse
+        deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ noble-security main restricted universe multiverse
+        EOF
+        sudo sed -i 's/^Types: deb$/Types: deb\nArchitectures: amd64/' /etc/apt/sources.list.d/ubuntu.sources
+        sudo apt-get update
+        sudo apt-get remove -y libcurl4-openssl-dev
+        sudo apt-get install -y gcc-aarch64-linux-gnu libcurl4-openssl-dev:arm64
 
     - name: Build
       run: |
@@ -97,10 +106,10 @@ jobs:
           RPM_ARCH="aarch64"
         fi
 
-        fpm -s dir -t deb -n ado -v "$VERSION" -a "$ARCH" -C ./tmp_install .
-        fpm -s dir -t rpm -n ado -v "$VERSION" -a "$RPM_ARCH" -C ./tmp_install .
-        fpm -s dir -t apk -n ado -v "$VERSION" -a "$ARCH" -C ./tmp_install .
-        fpm -s dir -t pacman -n ado -v "$VERSION" -a "$RPM_ARCH" -C ./tmp_install .
+        fpm -s dir -t deb -n ado -v "$VERSION" -a "$ARCH" -d "libcurl4" -d "python3" -C ./tmp_install .
+        fpm -s dir -t rpm -n ado -v "$VERSION" -a "$RPM_ARCH" -d "libcurl" -d "python3" -C ./tmp_install .
+        fpm -s dir -t apk -n ado -v "$VERSION" -a "$RPM_ARCH" -d "curl" -d "python3" -C ./tmp_install .
+        fpm -s dir -t pacman -n ado -v "$VERSION" -a "$RPM_ARCH" -d "curl" -d "python" -C ./tmp_install .
         ls -la ./*.deb ./*.rpm ./*.apk ./*.pkg.tar.zst
         mv ./*.deb dist/
         mv ./*.rpm dist/

@@ -5,9 +5,12 @@ class Ado < Formula
   sha256 ""
   license "MIT"
 
+  depends_on "curl"
+  depends_on "python"
+
   def install
     system "make"
-    bin.install "doc" => "ado"
+    system "make", "DESTDIR=#{prefix}", "PREFIX=", "install"
   end
 
   test do

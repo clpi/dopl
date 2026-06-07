@@ -19,7 +19,7 @@
             version = "unstable";
             src = ./.;
 
-            buildInputs = [ pkgs.gcc ];
+            buildInputs = [ pkgs.gcc pkgs.curl pkgs.python3 ];
 
             makeFlags = [ "PREFIX=$(out)" ];
 

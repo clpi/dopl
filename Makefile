@@ -37,6 +37,8 @@ bench: doc
 	./benchmarks/run.sh
 
 install: doc install-lsp
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 doc $(DESTDIR)$(BINDIR)/ado
 
 install-lsp:
 	install -d $(DESTDIR)$(BINDIR)
