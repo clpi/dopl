@@ -6,7 +6,7 @@ Full-featured LSP for the Ado programming language
 import json
 import sys
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 
 @dataclass
