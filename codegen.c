@@ -95,6 +95,17 @@ static void gen_expr(AST *ast, FILE *out) {
             gen_expr(ast->index.idx, out);
             fprintf(out, "]");
             break;
+        case AST_SLICE:
+            // Create a compound literal for the slice array
+            // ado_slice creates a new array with elements from arr[start..end] (exclusive)
+            fprintf(out, "({ int _s=");
+            gen_expr(ast->slice.start, out);
+            fprintf(out, ", _e=");
+            gen_expr(ast->slice.end, out);
+            fprintf(out, ", _len=_e>_s?_e-_s:0, _i; AdoArray _slice=ado_make_array((int[]){},_len); for(_i=0;_i<_len;_i++) _slice.data[_i]=");
+            gen_expr(ast->slice.arr, out);
+            fprintf(out, ".data[_s+_i]; _slice; })");
+            break;
         case AST_RANGE:
             fprintf(out, "({ int _f=");
             gen_expr(ast->range.start, out);

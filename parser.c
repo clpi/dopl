@@ -621,11 +621,15 @@ static void ast_free_children(AST *ast) {
             ast_free_children(ast->index.arr);
             ast_free_children(ast->index.idx);
             break;
+        case AST_SLICE:
+            ast_free_children(ast->slice.arr);
+            ast_free_children(ast->slice.start);
+            ast_free_children(ast->slice.end);
+            break;
         case AST_ASSIGN:
             ast_free_children(ast->assign.target);
             ast_free_children(ast->assign.val);
             break;
-        case AST_PRINT:
             for (int i = 0; i < ast->print.count; i++) ast_free_children(ast->print.vals[i]);
             free(ast->print.vals);
             break;
